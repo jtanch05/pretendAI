@@ -16,6 +16,7 @@ export type AssignedQuestion = {
   serverNow: string;
 };
 export type SubmittedAnswer = { id: string; creditBalance: number; acceptedAt: string };
+export type PendingDelivery = { answerId: string; questionId: string; questionText: string; answerText: string; answeredAt: string };
 
 type CreatedQuestionRow = {
   question_id: string;
@@ -31,6 +32,7 @@ type AssignedQuestionRow = {
   server_now: string;
 };
 type SubmittedAnswerRow = { answer_id: string; credit_balance: number; accepted_at: string };
+type PendingDeliveryRow = { answer_id: string; question_id: string; question_text: string; answer_text: string; answered_at: string };
 
 export const gameApi = {
   async createQuestion(text: string): Promise<CreatedQuestion> {
@@ -70,5 +72,20 @@ export const gameApi = {
     if (error) throw new Error(error.message);
     if (!answer) throw new Error("The server did not return the accepted answer.");
     return { id: answer.answer_id, creditBalance: answer.credit_balance, acceptedAt: answer.accepted_at };
+  },
+
+  async retrievePendingDelivery(): Promise<PendingDelivery | null> {
+    const { data, error } = await getSupabaseClient().rpc("retrieve_pending_delivery");
+    const delivery = (data as PendingDeliveryRow[] | null)?.[0];
+    if (error) throw new Error(error.message);
+    return delivery ? {
+      answerId: delivery.answer_id, questionId: delivery.question_id, questionText: delivery.question_text,
+      answerText: delivery.answer_text, answeredAt: delivery.answered_at
+    } : null;
+  },
+
+  async acknowledgeDelivery(answerId: string): Promise<void> {
+    const { error } = await getSupabaseClient().rpc("acknowledge_delivery", { delivered_answer_id: answerId });
+    if (error) throw new Error(error.message);
   }
 };
