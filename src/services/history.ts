@@ -3,11 +3,13 @@ import Dexie, { type EntityTable } from "dexie";
 export type WaitingHistoryEntry = {
   id?: number;
   questionId: string;
-  role: "asker";
+  role: "asker" | "answerer";
   questionText: string;
   status: "pending" | "reserved";
   createdAt: string;
   lastSyncedAt: string;
+  answerId?: string;
+  answerText?: string;
 };
 
 const database = new Dexie("pretend-ai") as Dexie & {
@@ -21,5 +23,8 @@ database.version(1).stores({
 export const history = {
   async saveWaitingQuestion(entry: Omit<WaitingHistoryEntry, "id" | "lastSyncedAt">) {
     await database.historyEntries.put({ ...entry, lastSyncedAt: new Date().toISOString() });
+  },
+  async saveSubmittedAnswer(entry: Omit<WaitingHistoryEntry, "id" | "lastSyncedAt" | "status">) {
+    await database.historyEntries.put({ ...entry, status: "reserved", lastSyncedAt: new Date().toISOString() });
   }
 };

@@ -15,6 +15,7 @@ export type AssignedQuestion = {
   reservationExpiresAt: string;
   serverNow: string;
 };
+export type SubmittedAnswer = { id: string; creditBalance: number; acceptedAt: string };
 
 type CreatedQuestionRow = {
   question_id: string;
@@ -29,6 +30,7 @@ type AssignedQuestionRow = {
   reservation_expires_at: string;
   server_now: string;
 };
+type SubmittedAnswerRow = { answer_id: string; credit_balance: number; accepted_at: string };
 
 export const gameApi = {
   async createQuestion(text: string): Promise<CreatedQuestion> {
@@ -60,5 +62,13 @@ export const gameApi = {
       reservationExpiresAt: question.reservation_expires_at,
       serverNow: question.server_now
     };
+  },
+
+  async submitAnswer(text: string): Promise<SubmittedAnswer> {
+    const { data, error } = await getSupabaseClient().rpc("submit_answer", { answer_text: text });
+    const answer = (data as SubmittedAnswerRow[] | null)?.[0];
+    if (error) throw new Error(error.message);
+    if (!answer) throw new Error("The server did not return the accepted answer.");
+    return { id: answer.answer_id, creditBalance: answer.credit_balance, acceptedAt: answer.accepted_at };
   }
 };

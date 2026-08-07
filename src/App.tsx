@@ -198,13 +198,47 @@ function Home({ player, onAsk, onAnswer }: { player: Player; onAsk: () => void; 
 }
 
 function AnswerQuestion({ player, assignment }: { player: Player; assignment: AssignedQuestion }) {
+  const [answer, setAnswer] = useState("");
+  const [balance, setBalance] = useState(player.creditBalance);
+  const [message, setMessage] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSubmitting(true);
+    setMessage(null);
+    try {
+      const accepted = await gameApi.submitAnswer(answer.trim());
+      setBalance(accepted.creditBalance);
+      try {
+        await history.saveSubmittedAnswer({
+          questionId: assignment.id, role: "answerer", questionText: assignment.text,
+          answerId: accepted.id, answerText: answer.trim(), createdAt: accepted.acceptedAt
+        });
+        setMessage("Answer submitted. You earned one credit.");
+      } catch {
+        setMessage("Answer submitted and credit earned, but it could not be saved to this browser.");
+      }
+    } catch (submitError: unknown) {
+      setMessage(messageFor(submitError));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   return <main className="home-shell"><section className="home-card" aria-labelledby="answer-title">
     <p className="eyebrow">Pretend to be AI</p>
     <h1 id="answer-title">Answer this question.</h1>
     <p className="question-preview">“{assignment.text}”</p>
     <ReservationTimer expiresAt={assignment.reservationExpiresAt} serverNow={assignment.serverNow} />
+    <form onSubmit={submit}><label className="question-label" htmlFor="answer">Your answer</label>
+      <textarea id="answer" value={answer} maxLength={750} required onChange={(event) => setAnswer(event.target.value)} />
+      <p className="fine-print">{answer.length}/750 characters</p>
+      {message && <p className={message.startsWith("Answer submitted") ? "status-message" : "form-error"} role="status">{message}</p>}
+      <button className="primary-action" type="submit" disabled={submitting || !answer.trim()}>{submitting ? "Submitting…" : "Submit answer"}</button>
+    </form>
     <p className="notice">Write the answer as a helpful, funny, absurd, sincere, or convincingly AI-like human.</p>
-    <span className="credit-balance">{pluralisedCredits(player.creditBalance)}</span>
+    <span className="credit-balance">{pluralisedCredits(balance)}</span>
   </section></main>;
 }
 
