@@ -92,5 +92,10 @@ export const gameApi = {
   async skipQuestion(): Promise<void> {
     const { error } = await getSupabaseClient().rpc("skip_question");
     if (error) throw new Error(error.message);
+  },
+
+  async rateAnswer(answerId: string, rating: "like" | "dislike"): Promise<void> {
+    const { error } = await getSupabaseClient().rpc("rate_answer", { rated_answer_id: answerId, rating_value: rating });
+    if (error) throw new Error(error.message);
   }
 };

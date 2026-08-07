@@ -296,10 +296,14 @@ function EmptyQueue({ player, error }: { player: Player; error: string | null })
 }
 
 function DeliveredAnswer({ player, delivery }: { player: Player; delivery: PendingDelivery }) {
+  const [rating, setRating] = useState<"like" | "dislike" | null>(null);
+  const [ratingError, setRatingError] = useState<string | null>(null);
   return <main className="home-shell"><section className="home-card" aria-labelledby="delivery-title">
     <p className="eyebrow">Your answer is ready</p><h1 id="delivery-title">A human answered your question.</h1>
     <p className="question-preview">“{delivery.questionText}”</p>
-    <p className="lede">{delivery.answerText}</p><p className="notice">Saved to this browser before the server copy was removed.</p>
+    <p className="lede">{delivery.answerText}</p><p>Did you enjoy this answer?</p>
+    <div className="form-actions"><button className="secondary-action" disabled={rating !== null} onClick={async () => { try { await gameApi.rateAnswer(delivery.answerId, "like"); setRating("like"); } catch (error: unknown) { setRatingError(messageFor(error)); } }}>Like</button><button className="secondary-action" disabled={rating !== null} onClick={async () => { try { await gameApi.rateAnswer(delivery.answerId, "dislike"); setRating("dislike"); } catch (error: unknown) { setRatingError(messageFor(error)); } }}>Dislike</button></div>
+    {rating && <p className="status-message" role="status">Thanks for your feedback.</p>}{ratingError && <p className="form-error" role="alert">{ratingError}</p>}<p className="notice">Saved to this browser before the server copy was removed.</p>
     <span className="credit-balance">{pluralisedCredits(player.creditBalance)}</span>
   </section></main>;
 }
