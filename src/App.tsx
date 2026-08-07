@@ -1,6 +1,6 @@
 import { type FormEvent, useEffect, useState } from "react";
 import { gameSession, type Player } from "./services/gameSession";
-import { gameApi, type WaitingQuestion } from "./services/gameApi";
+import { gameApi, type AssignedQuestion, type WaitingQuestion } from "./services/gameApi";
 import { history } from "./services/history";
 
 const AGE_CONFIRMATION_KEY = "pretend-ai.age-confirmed";
@@ -11,7 +11,10 @@ type View =
   | { screen: "restoring" }
   | { screen: "home"; player: Player }
   | { screen: "ask"; player: Player; error: string | null }
-  | { screen: "waiting"; player: Player; question: WaitingQuestion };
+  | { screen: "waiting"; player: Player; question: WaitingQuestion }
+  | { screen: "finding-question"; player: Player }
+  | { screen: "answering"; player: Player; assignment: AssignedQuestion }
+  | { screen: "empty-queue"; player: Player; error: string | null };
 
 function pluralisedCredits(balance: number): string {
   return `${balance} credit${balance === 1 ? "" : "s"}`;
@@ -68,7 +71,21 @@ export default function App() {
   }
 
   if (view.screen === "home") {
-    return <Home player={view.player} onAsk={() => setView({ screen: "ask", player: view.player, error: null })} />;
+    return <Home
+      player={view.player}
+      onAsk={() => setView({ screen: "ask", player: view.player, error: null })}
+      onAnswer={async () => {
+        setView({ screen: "finding-question", player: view.player });
+        try {
+          const assignment = await gameApi.getAndReserveQuestion();
+          setView(assignment
+            ? { screen: "answering", player: view.player, assignment }
+            : { screen: "empty-queue", player: view.player, error: null });
+        } catch (assignmentError: unknown) {
+          setView({ screen: "empty-queue", player: view.player, error: messageFor(assignmentError) });
+        }
+      }}
+    />;
   }
 
   if (view.screen === "ask") {
@@ -100,6 +117,18 @@ export default function App() {
 
   if (view.screen === "waiting") {
     return <WaitingQuestion player={view.player} question={view.question} />;
+  }
+
+  if (view.screen === "answering") {
+    return <AnswerQuestion player={view.player} assignment={view.assignment} />;
+  }
+
+  if (view.screen === "empty-queue") {
+    return <EmptyQueue player={view.player} error={view.error} />;
+  }
+
+  if (view.screen === "finding-question") {
+    return <LoadingCard message="Finding a question that needs a human answer…" />;
   }
 
   const isWorking = view.screen === "entering" || view.screen === "restoring";
@@ -138,7 +167,7 @@ export default function App() {
   );
 }
 
-function Home({ player, onAsk }: { player: Player; onAsk: () => void }) {
+function Home({ player, onAsk, onAnswer }: { player: Player; onAsk: () => void; onAnswer: () => void }) {
   return (
     <main className="home-shell">
       <header className="topbar">
@@ -157,7 +186,7 @@ function Home({ player, onAsk }: { player: Player; onAsk: () => void }) {
             <span>Ask a Question</span>
             <small>Spend one credit to ask a random human.</small>
           </button>
-          <button className="role-action" type="button">
+          <button className="role-action" type="button" onClick={onAnswer}>
             <span>Pretend to Be AI</span>
             <small>Answer someone else’s question and earn a credit.</small>
           </button>
@@ -166,6 +195,45 @@ function Home({ player, onAsk }: { player: Player; onAsk: () => void }) {
       </section>
     </main>
   );
+}
+
+function AnswerQuestion({ player, assignment }: { player: Player; assignment: AssignedQuestion }) {
+  return <main className="home-shell"><section className="home-card" aria-labelledby="answer-title">
+    <p className="eyebrow">Pretend to be AI</p>
+    <h1 id="answer-title">Answer this question.</h1>
+    <p className="question-preview">“{assignment.text}”</p>
+    <ReservationTimer expiresAt={assignment.reservationExpiresAt} serverNow={assignment.serverNow} />
+    <p className="notice">Write the answer as a helpful, funny, absurd, sincere, or convincingly AI-like human.</p>
+    <span className="credit-balance">{pluralisedCredits(player.creditBalance)}</span>
+  </section></main>;
+}
+
+function ReservationTimer({ expiresAt, serverNow }: { expiresAt: string; serverNow: string }) {
+  const [elapsed, setElapsed] = useState(0);
+  const remaining = Math.max(0, Date.parse(expiresAt) - Date.parse(serverNow) - elapsed);
+  const seconds = Math.ceil(remaining / 1000);
+
+  useEffect(() => {
+    const startedAt = Date.now();
+    const interval = window.setInterval(() => setElapsed(Date.now() - startedAt), 1000);
+    return () => window.clearInterval(interval);
+  }, []);
+
+  return <p className="timer" role="timer" aria-live="off">Time remaining: {Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, "0")}</p>;
+}
+
+function EmptyQueue({ player, error }: { player: Player; error: string | null }) {
+  return <main className="home-shell"><section className="home-card" aria-labelledby="empty-title">
+    <p className="eyebrow">No assignment available</p><h1 id="empty-title">No questions need answers right now.</h1>
+    <p className="lede">Try again shortly, ask a question, or review your activity.</p>
+    {error && <p className="form-error" role="alert">{error}</p>}
+    <div className="form-actions"><button className="primary-action" type="button">Check Again</button><button className="secondary-action" type="button">Ask a Question</button><button className="secondary-action" type="button">View Activity</button></div>
+    <span className="credit-balance">{pluralisedCredits(player.creditBalance)}</span>
+  </section></main>;
+}
+
+function LoadingCard({ message }: { message: string }) {
+  return <main className="gate-shell" aria-busy="true"><section className="gate-card"><p className="status-message" role="status">{message}</p></section></main>;
 }
 
 function AskQuestion({

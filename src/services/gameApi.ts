@@ -9,11 +9,25 @@ export type WaitingQuestion = {
 
 export type CreatedQuestion = WaitingQuestion & { creditBalance: number };
 
+export type AssignedQuestion = {
+  id: string;
+  text: string;
+  reservationExpiresAt: string;
+  serverNow: string;
+};
+
 type CreatedQuestionRow = {
   question_id: string;
   credit_balance: number;
   question_status: "pending";
   created_at: string;
+};
+
+type AssignedQuestionRow = {
+  question_id: string;
+  question_text: string;
+  reservation_expires_at: string;
+  server_now: string;
 };
 
 export const gameApi = {
@@ -30,6 +44,21 @@ export const gameApi = {
       status: question.question_status,
       createdAt: question.created_at,
       creditBalance: question.credit_balance
+    };
+  },
+
+  async getAndReserveQuestion(): Promise<AssignedQuestion | null> {
+    const { data, error } = await getSupabaseClient().rpc("get_and_reserve_question");
+    const question = (data as AssignedQuestionRow[] | null)?.[0];
+
+    if (error) throw new Error(error.message);
+    if (!question) return null;
+
+    return {
+      id: question.question_id,
+      text: question.question_text,
+      reservationExpiresAt: question.reservation_expires_at,
+      serverNow: question.server_now
     };
   }
 };
