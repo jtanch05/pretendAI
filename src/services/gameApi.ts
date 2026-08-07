@@ -87,5 +87,10 @@ export const gameApi = {
   async acknowledgeDelivery(answerId: string): Promise<void> {
     const { error } = await getSupabaseClient().rpc("acknowledge_delivery", { delivered_answer_id: answerId });
     if (error) throw new Error(error.message);
+  },
+
+  async skipQuestion(): Promise<void> {
+    const { error } = await getSupabaseClient().rpc("skip_question");
+    if (error) throw new Error(error.message);
   }
 };

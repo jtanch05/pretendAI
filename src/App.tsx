@@ -140,7 +140,10 @@ export default function App() {
   }
 
   if (view.screen === "answering") {
-    return <AnswerQuestion player={view.player} assignment={view.assignment} />;
+    return <AnswerQuestion player={view.player} assignment={view.assignment} onSkip={async () => {
+      await gameApi.skipQuestion();
+      setView({ screen: "home", player: view.player });
+    }} />;
   }
 
   if (view.screen === "empty-queue") {
@@ -221,11 +224,12 @@ function Home({ player, onAsk, onAnswer }: { player: Player; onAsk: () => void; 
   );
 }
 
-function AnswerQuestion({ player, assignment }: { player: Player; assignment: AssignedQuestion }) {
+function AnswerQuestion({ player, assignment, onSkip }: { player: Player; assignment: AssignedQuestion; onSkip: () => Promise<void> }) {
   const [answer, setAnswer] = useState("");
   const [balance, setBalance] = useState(player.creditBalance);
   const [message, setMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [skipping, setSkipping] = useState(false);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -259,7 +263,8 @@ function AnswerQuestion({ player, assignment }: { player: Player; assignment: As
       <textarea id="answer" value={answer} maxLength={750} required onChange={(event) => setAnswer(event.target.value)} />
       <p className="fine-print">{answer.length}/750 characters</p>
       {message && <p className={message.startsWith("Answer submitted") ? "status-message" : "form-error"} role="status">{message}</p>}
-      <button className="primary-action" type="submit" disabled={submitting || !answer.trim()}>{submitting ? "Submitting…" : "Submit answer"}</button>
+      <div className="form-actions"><button className="primary-action" type="submit" disabled={submitting || !answer.trim()}>{submitting ? "Submitting…" : "Submit answer"}</button>
+      <button className="secondary-action" type="button" disabled={skipping || submitting} onClick={async () => { setSkipping(true); try { await onSkip(); } catch (error: unknown) { setMessage(messageFor(error)); setSkipping(false); } }}>Skip</button></div>
     </form>
     <p className="notice">Write the answer as a helpful, funny, absurd, sincere, or convincingly AI-like human.</p>
     <span className="credit-balance">{pluralisedCredits(balance)}</span>
