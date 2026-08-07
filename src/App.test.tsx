@@ -12,7 +12,15 @@ vi.mock("./services/gameSession", () => ({
   }
 }));
 
-vi.mock("./services/gameApi", () => ({ gameApi: { createQuestion: vi.fn() } }));
+vi.mock("./services/gameApi", () => ({
+  gameApi: {
+    createQuestion: vi.fn(),
+    getAndReserveQuestion: vi.fn(),
+    submitAnswer: vi.fn(),
+    retrievePendingDelivery: vi.fn().mockResolvedValue(null),
+    acknowledgeDelivery: vi.fn()
+  }
+}));
 vi.mock("./services/history", () => ({ history: { saveWaitingQuestion: vi.fn() } }));
 
 describe("first-visit session", () => {
