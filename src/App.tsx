@@ -1,6 +1,6 @@
 import { type FormEvent, useEffect, useState } from "react";
 import { gameSession, type Player } from "./services/gameSession";
-import { gameApi, type AssignedQuestion, type WaitingQuestion } from "./services/gameApi";
+import { gameApi, type AssignedQuestion, type PendingDelivery, type WaitingQuestion } from "./services/gameApi";
 import { history } from "./services/history";
 
 const AGE_CONFIRMATION_KEY = "pretend-ai.age-confirmed";
@@ -14,7 +14,8 @@ type View =
   | { screen: "waiting"; player: Player; question: WaitingQuestion }
   | { screen: "finding-question"; player: Player }
   | { screen: "answering"; player: Player; assignment: AssignedQuestion }
-  | { screen: "empty-queue"; player: Player; error: string | null };
+  | { screen: "empty-queue"; player: Player; error: string | null }
+  | { screen: "delivered"; player: Player; delivery: PendingDelivery };
 
 function pluralisedCredits(balance: number): string {
   return `${balance} credit${balance === 1 ? "" : "s"}`;
@@ -37,12 +38,22 @@ export default function App() {
 
     gameSession
       .restore()
-      .then((restoredPlayer) => {
+      .then(async (restoredPlayer) => {
         if (!isCurrent) return;
         if (restoredPlayer) {
-          setView(restoredPlayer.activeQuestion
-            ? { screen: "waiting", player: restoredPlayer, question: restoredPlayer.activeQuestion }
-            : { screen: "home", player: restoredPlayer });
+          if (restoredPlayer.activeQuestion) {
+            setView({ screen: "waiting", player: restoredPlayer, question: restoredPlayer.activeQuestion });
+            return;
+          }
+          const delivery = await gameApi.retrievePendingDelivery();
+          if (!isCurrent) return;
+          if (!delivery) {
+            setView({ screen: "home", player: restoredPlayer });
+            return;
+          }
+          await history.saveDeliveredAnswer({ questionId: delivery.questionId, role: "asker", questionText: delivery.questionText, answerId: delivery.answerId, answerText: delivery.answerText, createdAt: delivery.answeredAt });
+          await gameApi.acknowledgeDelivery(delivery.answerId);
+          if (isCurrent) setView({ screen: "delivered", player: restoredPlayer, delivery });
         } else {
           localStorage.removeItem(AGE_CONFIRMATION_KEY);
           setView({ screen: "age-gate", error: null });
@@ -125,6 +136,10 @@ export default function App() {
 
   if (view.screen === "empty-queue") {
     return <EmptyQueue player={view.player} error={view.error} />;
+  }
+
+  if (view.screen === "delivered") {
+    return <DeliveredAnswer player={view.player} delivery={view.delivery} />;
   }
 
   if (view.screen === "finding-question") {
@@ -262,6 +277,15 @@ function EmptyQueue({ player, error }: { player: Player; error: string | null })
     <p className="lede">Try again shortly, ask a question, or review your activity.</p>
     {error && <p className="form-error" role="alert">{error}</p>}
     <div className="form-actions"><button className="primary-action" type="button">Check Again</button><button className="secondary-action" type="button">Ask a Question</button><button className="secondary-action" type="button">View Activity</button></div>
+    <span className="credit-balance">{pluralisedCredits(player.creditBalance)}</span>
+  </section></main>;
+}
+
+function DeliveredAnswer({ player, delivery }: { player: Player; delivery: PendingDelivery }) {
+  return <main className="home-shell"><section className="home-card" aria-labelledby="delivery-title">
+    <p className="eyebrow">Your answer is ready</p><h1 id="delivery-title">A human answered your question.</h1>
+    <p className="question-preview">“{delivery.questionText}”</p>
+    <p className="lede">{delivery.answerText}</p><p className="notice">Saved to this browser before the server copy was removed.</p>
     <span className="credit-balance">{pluralisedCredits(player.creditBalance)}</span>
   </section></main>;
 }
