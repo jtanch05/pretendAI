@@ -28,6 +28,13 @@ export const history = {
     await database.historyEntries.put({ ...entry, status: "reserved", lastSyncedAt: new Date().toISOString() });
   },
   async saveDeliveredAnswer(entry: Omit<WaitingHistoryEntry, "id" | "lastSyncedAt" | "status">) {
-    await database.historyEntries.put({ ...entry, status: "delivered", lastSyncedAt: new Date().toISOString() });
+    const id = await database.historyEntries.put({ ...entry, status: "delivered", lastSyncedAt: new Date().toISOString() });
+    const saved = await database.historyEntries.get(id);
+    if (!saved || saved.answerId !== entry.answerId || saved.answerText !== entry.answerText) {
+      throw new Error("The delivered answer could not be verified in local history.");
+    }
+  },
+  async latestDeliveredAnswer(): Promise<WaitingHistoryEntry | undefined> {
+    return database.historyEntries.where("status").equals("delivered").last();
   }
 };

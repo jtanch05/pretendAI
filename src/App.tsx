@@ -48,7 +48,16 @@ export default function App() {
           const delivery = await gameApi.retrievePendingDelivery();
           if (!isCurrent) return;
           if (!delivery) {
-            setView({ screen: "home", player: restoredPlayer });
+            const localDelivery = await history.latestDeliveredAnswer();
+            if (localDelivery?.answerId && localDelivery.answerText && isCurrent) {
+              setView({ screen: "delivered", player: restoredPlayer, delivery: {
+                answerId: localDelivery.answerId, questionId: localDelivery.questionId,
+                questionText: localDelivery.questionText, answerText: localDelivery.answerText,
+                answeredAt: localDelivery.createdAt
+              } });
+            } else if (isCurrent) {
+              setView({ screen: "home", player: restoredPlayer });
+            }
             return;
           }
           await history.saveDeliveredAnswer({ questionId: delivery.questionId, role: "asker", questionText: delivery.questionText, answerId: delivery.answerId, answerText: delivery.answerText, createdAt: delivery.answeredAt });

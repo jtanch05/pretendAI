@@ -21,7 +21,9 @@ vi.mock("./services/gameApi", () => ({
     acknowledgeDelivery: vi.fn()
   }
 }));
-vi.mock("./services/history", () => ({ history: { saveWaitingQuestion: vi.fn() } }));
+vi.mock("./services/history", () => ({
+  history: { saveWaitingQuestion: vi.fn(), saveSubmittedAnswer: vi.fn(), saveDeliveredAnswer: vi.fn(), latestDeliveredAnswer: vi.fn().mockResolvedValue(undefined) }
+}));
 
 describe("first-visit session", () => {
   afterEach(cleanup);
