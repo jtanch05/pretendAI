@@ -1,5 +1,7 @@
-import { useEffect, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import { gameSession, type Player } from "./services/gameSession";
+import { gameApi, type WaitingQuestion } from "./services/gameApi";
+import { history } from "./services/history";
 
 const AGE_CONFIRMATION_KEY = "pretend-ai.age-confirmed";
 
@@ -7,7 +9,9 @@ type View =
   | { screen: "age-gate"; error: string | null }
   | { screen: "entering" }
   | { screen: "restoring" }
-  | { screen: "home"; player: Player };
+  | { screen: "home"; player: Player }
+  | { screen: "ask"; player: Player; error: string | null }
+  | { screen: "waiting"; player: Player; question: WaitingQuestion };
 
 function pluralisedCredits(balance: number): string {
   return `${balance} credit${balance === 1 ? "" : "s"}`;
@@ -33,7 +37,9 @@ export default function App() {
       .then((restoredPlayer) => {
         if (!isCurrent) return;
         if (restoredPlayer) {
-          setView({ screen: "home", player: restoredPlayer });
+          setView(restoredPlayer.activeQuestion
+            ? { screen: "waiting", player: restoredPlayer, question: restoredPlayer.activeQuestion }
+            : { screen: "home", player: restoredPlayer });
         } else {
           localStorage.removeItem(AGE_CONFIRMATION_KEY);
           setView({ screen: "age-gate", error: null });
@@ -62,7 +68,38 @@ export default function App() {
   }
 
   if (view.screen === "home") {
-    return <Home player={view.player} />;
+    return <Home player={view.player} onAsk={() => setView({ screen: "ask", player: view.player, error: null })} />;
+  }
+
+  if (view.screen === "ask") {
+    return <AskQuestion
+      player={view.player}
+      error={view.error}
+      onCancel={() => setView({ screen: "home", player: view.player })}
+      onSubmit={async (text) => {
+        try {
+          const question = await gameApi.createQuestion(text);
+          await history.saveWaitingQuestion({
+            questionId: question.id,
+            role: "asker",
+            questionText: question.text,
+            status: question.status,
+            createdAt: question.createdAt
+          });
+          setView({
+            screen: "waiting",
+            player: { creditBalance: question.creditBalance, activeQuestion: question },
+            question
+          });
+        } catch (questionError: unknown) {
+          setView({ screen: "ask", player: view.player, error: messageFor(questionError) });
+        }
+      }}
+    />;
+  }
+
+  if (view.screen === "waiting") {
+    return <WaitingQuestion player={view.player} question={view.question} />;
   }
 
   const isWorking = view.screen === "entering" || view.screen === "restoring";
@@ -101,7 +138,7 @@ export default function App() {
   );
 }
 
-function Home({ player }: { player: Player }) {
+function Home({ player, onAsk }: { player: Player; onAsk: () => void }) {
   return (
     <main className="home-shell">
       <header className="topbar">
@@ -116,7 +153,7 @@ function Home({ player }: { player: Player }) {
         <h1 id="home-title">What would you like to do?</h1>
         <p className="lede">One question. One stranger. One fake AI answer.</p>
         <div className="action-grid">
-          <button className="role-action" type="button">
+          <button className="role-action" type="button" onClick={onAsk}>
             <span>Ask a Question</span>
             <small>Spend one credit to ask a random human.</small>
           </button>
@@ -129,6 +166,52 @@ function Home({ player }: { player: Player }) {
       </section>
     </main>
   );
+}
+
+function AskQuestion({
+  player,
+  error,
+  onCancel,
+  onSubmit
+}: {
+  player: Player;
+  error: string | null;
+  onCancel: () => void;
+  onSubmit: (text: string) => Promise<void>;
+}) {
+  const [text, setText] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setIsSubmitting(true);
+    await onSubmit(text.trim());
+    setIsSubmitting(false);
+  }
+
+  return <main className="home-shell"><section className="home-card" aria-labelledby="ask-title">
+    <p className="eyebrow">Ask a question</p>
+    <h1 id="ask-title">What would you like a stranger to answer?</h1>
+    <p className="lede">Answers come from random people and are for entertainment.</p>
+    <form onSubmit={submit}>
+      <label className="question-label" htmlFor="question">Your question</label>
+      <textarea id="question" value={text} maxLength={500} required onChange={(event) => setText(event.target.value)} />
+      <p className="fine-print">{text.length}/500 characters</p>
+      {error && <p className="form-error" role="alert">{error}</p>}
+      <div className="form-actions"><button className="primary-action" disabled={isSubmitting || !text.trim()} type="submit">{isSubmitting ? "Sending…" : "Send question"}</button><button className="secondary-action" type="button" onClick={onCancel}>Cancel</button></div>
+    </form>
+    <p className="notice">{pluralisedCredits(player.creditBalance)} available. Sending uses one credit.</p>
+  </section></main>;
+}
+
+function WaitingQuestion({ player, question }: { player: Player; question: WaitingQuestion }) {
+  return <main className="home-shell"><section className="home-card" aria-labelledby="waiting-title">
+    <p className="eyebrow">Your question is waiting</p>
+    <h1 id="waiting-title">A human will answer when they are ready.</h1>
+    <p className="question-preview">“{question.text}”</p>
+    <p className="lede">You can leave this page. We’ll restore the authoritative status when you return.</p>
+    <span className="credit-balance">{pluralisedCredits(player.creditBalance)}</span>
+  </section></main>;
 }
 
 function messageFor(error: unknown): string {
