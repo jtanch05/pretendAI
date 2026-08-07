@@ -22,7 +22,7 @@ vi.mock("./services/gameApi", () => ({
   }
 }));
 vi.mock("./services/history", () => ({
-  history: { saveWaitingQuestion: vi.fn(), saveSubmittedAnswer: vi.fn(), saveDeliveredAnswer: vi.fn(), latestDeliveredAnswer: vi.fn().mockResolvedValue(undefined) }
+  history: { saveWaitingQuestion: vi.fn(), saveSubmittedAnswer: vi.fn(), saveDeliveredAnswer: vi.fn(), latestDeliveredAnswer: vi.fn().mockResolvedValue(undefined), all: vi.fn().mockResolvedValue([]), deleteEntry: vi.fn(), clear: vi.fn() }
 }));
 
 describe("first-visit session", () => {

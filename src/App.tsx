@@ -1,7 +1,7 @@
 import { type FormEvent, useEffect, useState } from "react";
 import { gameSession, type Player } from "./services/gameSession";
 import { gameApi, type AssignedQuestion, type PendingDelivery, type WaitingQuestion } from "./services/gameApi";
-import { history } from "./services/history";
+import { history, type WaitingHistoryEntry } from "./services/history";
 
 const AGE_CONFIRMATION_KEY = "pretend-ai.age-confirmed";
 
@@ -15,7 +15,8 @@ type View =
   | { screen: "finding-question"; player: Player }
   | { screen: "answering"; player: Player; assignment: AssignedQuestion }
   | { screen: "empty-queue"; player: Player; error: string | null }
-  | { screen: "delivered"; player: Player; delivery: PendingDelivery };
+  | { screen: "delivered"; player: Player; delivery: PendingDelivery }
+  | { screen: "activity"; player: Player };
 
 function pluralisedCredits(balance: number): string {
   return `${balance} credit${balance === 1 ? "" : "s"}`;
@@ -94,6 +95,7 @@ export default function App() {
     return <Home
       player={view.player}
       onAsk={() => setView({ screen: "ask", player: view.player, error: null })}
+      onActivity={() => setView({ screen: "activity", player: view.player })}
       onAnswer={async () => {
         setView({ screen: "finding-question", player: view.player });
         try {
@@ -154,6 +156,10 @@ export default function App() {
     return <DeliveredAnswer player={view.player} delivery={view.delivery} />;
   }
 
+  if (view.screen === "activity") {
+    return <Activity player={view.player} onBack={() => setView({ screen: "home", player: view.player })} />;
+  }
+
   if (view.screen === "finding-question") {
     return <LoadingCard message="Finding a question that needs a human answer…" />;
   }
@@ -194,12 +200,12 @@ export default function App() {
   );
 }
 
-function Home({ player, onAsk, onAnswer }: { player: Player; onAsk: () => void; onAnswer: () => void }) {
+function Home({ player, onAsk, onAnswer, onActivity }: { player: Player; onAsk: () => void; onAnswer: () => void; onActivity: () => void }) {
   return (
     <main className="home-shell">
       <header className="topbar">
         <a className="wordmark" href="/" aria-label="Pretend AI home">Pretend AI</a>
-        <span className="credit-balance" aria-label={`Authoritative balance: ${pluralisedCredits(player.creditBalance)}`}>
+        <button className="nav-button" type="button" onClick={onActivity}>Activity</button><span className="credit-balance" aria-label={`Authoritative balance: ${pluralisedCredits(player.creditBalance)}`}>
           {pluralisedCredits(player.creditBalance)}
         </span>
       </header>
@@ -222,6 +228,24 @@ function Home({ player, onAsk, onAnswer }: { player: Player; onAsk: () => void; 
       </section>
     </main>
   );
+}
+
+function Activity({ player, onBack }: { player: Player; onBack: () => void }) {
+  const [entries, setEntries] = useState<WaitingHistoryEntry[]>([]);
+  const [confirming, setConfirming] = useState(false);
+
+  useEffect(() => { void history.all().then(setEntries); }, []);
+  async function deleteEntry(id: number) { await history.deleteEntry(id); setEntries((current) => current.filter((entry) => entry.id !== id)); }
+  async function clearEntries() { await history.clear(); setEntries([]); setConfirming(false); }
+
+  return <main className="home-shell"><section className="home-card" aria-labelledby="activity-title">
+    <p className="eyebrow">Activity</p><h1 id="activity-title">Saved on this browser.</h1>
+    <p className="notice">History is saved only on this browser. Clearing browser data permanently removes it and cannot be recovered on another device.</p>
+    {entries.length === 0 ? <p className="lede">No local activity yet.</p> : <ul className="activity-list">{entries.map((entry) => <li key={entry.id}><strong>{entry.role === "asker" ? "You asked" : "You answered"}</strong><p>{entry.questionText}</p>{entry.answerText && <p>{entry.answerText}</p>}<button className="secondary-action" type="button" onClick={() => void deleteEntry(entry.id!)}>Delete</button></li>)}</ul>}
+    <div className="form-actions"><button className="secondary-action" type="button" onClick={onBack}>Back home</button>{entries.length > 0 && <button className="secondary-action" type="button" onClick={() => setConfirming(true)}>Clear all history</button>}</div>
+    {confirming && <div className="confirm-panel" role="alert"><p>Delete all local history? This cannot be undone.</p><button className="primary-action" type="button" onClick={() => void clearEntries()}>Delete all</button><button className="secondary-action" type="button" onClick={() => setConfirming(false)}>Cancel</button></div>}
+    <span className="credit-balance">{pluralisedCredits(player.creditBalance)}</span>
+  </section></main>;
 }
 
 function AnswerQuestion({ player, assignment, onSkip }: { player: Player; assignment: AssignedQuestion; onSkip: () => Promise<void> }) {

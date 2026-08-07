@@ -48,6 +48,7 @@ h1 { max-width: 16ch; margin: 0; font-size: clamp(2.25rem, 7vw, 5.25rem); line-h
 .topbar { width: min(100%, 1120px); display: flex; justify-content: space-between; align-items: center; }
 .wordmark { color: inherit; font-size: 1.1rem; font-weight: 800; letter-spacing: -.05em; text-decoration: none; }
 .credit-balance { border: 1px solid #2066e8; border-radius: 999px; color: #1754c4; padding: 7px 12px; font-size: .875rem; font-weight: 750; }
+.nav-button { border: 0; background: transparent; color: #1754c4; cursor: pointer; font-weight: 750; margin-left: auto; margin-right: 12px; }
 .home-card { width: min(100%, 980px); }
 .home-card h1 { max-width: none; }
 .action-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 40px; }
@@ -63,6 +64,7 @@ textarea:focus { border-color: #2066e8; outline: 3px solid #c9dbff; }
 .secondary-action { min-height: 48px; border: 1px solid #aeb8c8; border-radius: 999px; background: transparent; cursor: pointer; padding: 12px 22px; color: #171b26; font-weight: 700; }
 .question-preview { margin: 34px 0 0; border-left: 3px solid #2066e8; padding-left: 18px; font-size: clamp(1.25rem, 3vw, 1.8rem); line-height: 1.35; }
 .timer { margin: 24px 0; font-variant-numeric: tabular-nums; font-weight: 800; }
+.activity-list { display: grid; gap: 14px; list-style: none; margin: 28px 0; padding: 0; }.activity-list li, .confirm-panel { border: 1px solid #d9dee8; border-radius: 16px; padding: 18px; }.activity-list p { margin: 8px 0; line-height: 1.5; }.confirm-panel { margin-top: 22px; }
 
 @media (max-width: 620px) {
   .gate-shell, .home-shell { padding: 16px; }

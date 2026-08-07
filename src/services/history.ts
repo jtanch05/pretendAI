@@ -36,5 +36,14 @@ export const history = {
   },
   async latestDeliveredAnswer(): Promise<WaitingHistoryEntry | undefined> {
     return database.historyEntries.where("status").equals("delivered").last();
+  },
+  async all(): Promise<WaitingHistoryEntry[]> {
+    return database.historyEntries.orderBy("createdAt").reverse().toArray();
+  },
+  async deleteEntry(id: number): Promise<void> {
+    await database.historyEntries.delete(id);
+  },
+  async clear(): Promise<void> {
+    await database.historyEntries.clear();
   }
 };
