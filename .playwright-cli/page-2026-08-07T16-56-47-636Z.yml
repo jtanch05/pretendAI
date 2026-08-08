@@ -1,0 +1,13 @@
+- main [ref=e151]:
+  - region [ref=e152]:
+    - paragraph [ref=e153]: Ask a question
+    - heading "What would you like a stranger to answer?" [level=1] [ref=e154]
+    - paragraph [ref=e155]: Answers come from random people and are for entertainment.
+    - generic [ref=e156]:
+      - generic [ref=e157]: Your question
+      - textbox "Your question" [ref=e158]
+      - paragraph [ref=e159]: 0/500 characters
+      - generic [ref=e160]:
+        - button "Send question" [disabled] [ref=e161]
+        - button "Cancel" [ref=e162] [cursor=pointer]
+    - paragraph [ref=e163]: 1 credit available. Sending uses one credit.

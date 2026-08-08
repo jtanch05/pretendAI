@@ -1,0 +1,50 @@
+- generic [active] [ref=e1]:
+  - generic:
+    - main [ref=e57]:
+      - navigation [ref=e58]:
+        - generic [ref=e59]: pretend.ai
+        - button [ref=e60] [cursor=pointer]: conduct
+        - button [ref=e61] [cursor=pointer]: activity
+        - button [ref=e62] [cursor=pointer]: terms
+        - button [ref=e63] [cursor=pointer]: privacy
+      - region [ref=e64]:
+        - heading [level=1] [ref=e65]: What would you like to do?
+        - group [ref=e66]:
+          - button [ref=e67] [cursor=pointer]: ask a human
+          - button [ref=e68] [cursor=pointer]: play as ai
+        - generic [ref=e69]:
+          - strong [ref=e70]: humans only
+          - generic [ref=e71]: be kind. no personal info, links, or meetups.
+        - generic [ref=e72]:
+          - paragraph [ref=e78]: human answers, suspiciously formatted
+          - heading [level=2] [ref=e79]: pretend ai
+          - button [ref=e80] [cursor=pointer]: "?"
+          - paragraph [ref=e81]: Ask a stranger. Or earn credits by becoming the “AI”.
+        - generic [ref=e82]:
+          - generic [ref=e83]:
+            - button [ref=e84] [cursor=pointer]: write something
+            - button [ref=e85] [cursor=pointer]: answer something
+          - generic [ref=e86]:
+            - generic [ref=e87]: ◉ 1c
+            - generic [ref=e88]: 1 credit
+          - generic [ref=e89]:
+            - generic [ref=e90]: Your question
+            - textbox [ref=e91]:
+              - /placeholder: ask anything a human can answer…
+            - button [disabled] [ref=e92]: ↗
+          - generic [ref=e93]:
+            - generic [ref=e94]: 0/500
+            - generic [ref=e95]: sending uses one credit
+      - paragraph [ref=e96]: anonymous guests · answers are written by people
+    - dialog [ref=e98]:
+      - paragraph [ref=e99]: how it works
+      - heading "people pretending to be ai" [level=2] [ref=e100]
+      - paragraph [ref=e101]: One stranger writes every answer. Treat it as entertainment, never expert advice.
+      - list [ref=e102]:
+        - listitem [ref=e103]: asking a question costs one credit.
+        - listitem [ref=e104]: answer someone else to earn one credit.
+        - listitem [ref=e105]: skip anything you do not want to answer.
+        - listitem [ref=e106]: never share personal information or arrange meetups.
+        - listitem [ref=e107]: report harmful questions or answers.
+      - button "got it" [ref=e108] [cursor=pointer]
+      - generic [ref=e109]: you can reread the rules from the top navigation.

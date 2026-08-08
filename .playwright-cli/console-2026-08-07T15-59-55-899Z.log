@@ -1,0 +1,57 @@
+[    1983ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:5173/node_modules/.vite/deps/react-dom_client.js?v=559ce284:20102
+[    2060ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5173/favicon.ico:0
+[   19797ms] [ERROR] Failed to load resource: the server responded with a status of 422 () @ https://jqfsyrtmkxrwxzneysbf.supabase.co/auth/v1/signup:0
+[   21614ms] [ERROR] Failed to load resource: the server responded with a status of 422 () @ https://jqfsyrtmkxrwxzneysbf.supabase.co/auth/v1/signup:0
+[   22547ms] [ERROR] Failed to load resource: the server responded with a status of 422 () @ https://jqfsyrtmkxrwxzneysbf.supabase.co/auth/v1/signup:0
+[  158561ms] [ERROR] Failed to load resource: the server responded with a status of 422 () @ https://jqfsyrtmkxrwxzneysbf.supabase.co/auth/v1/signup:0
+[  165155ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:5173/node_modules/.vite/deps/react-dom_client.js?v=559ce284:20102
+[  232124ms] [ERROR] Failed to load resource: the server responded with a status of 422 () @ https://jqfsyrtmkxrwxzneysbf.supabase.co/auth/v1/signup:0
+[  232131ms] ReferenceError: EntryError is not defined
+    at App (http://127.0.0.1:5173/src/App.tsx?t=1786118627632:303:68)
+    at Object.react_stack_bottom_frame (http://127.0.0.1:5173/node_modules/.vite/deps/react-dom_client.js?v=559ce284:18509:20)
+    at renderWithHooks (http://127.0.0.1:5173/node_modules/.vite/deps/react-dom_client.js?v=559ce284:5654:24)
+    at updateFunctionComponent (http://127.0.0.1:5173/node_modules/.vite/deps/react-dom_client.js?v=559ce284:7475:21)
+    at beginWork (http://127.0.0.1:5173/node_modules/.vite/deps/react-dom_client.js?v=559ce284:8525:20)
+    at runWithFiberInDEV (http://127.0.0.1:5173/node_modules/.vite/deps/react-dom_client.js?v=559ce284:997:72)
+    at performUnitOfWork (http://127.0.0.1:5173/node_modules/.vite/deps/react-dom_client.js?v=559ce284:12561:98)
+    at workLoopSync (http://127.0.0.1:5173/node_modules/.vite/deps/react-dom_client.js?v=559ce284:12424:43)
+    at renderRootSync (http://127.0.0.1:5173/node_modules/.vite/deps/react-dom_client.js?v=559ce284:12408:13)
+    at performWorkOnRoot (http://127.0.0.1:5173/node_modules/.vite/deps/react-dom_client.js?v=559ce284:11827:37)
+[  232130ms] [WARNING] %s
+
+%s
+ An error occurred in the <App> component. Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries. @ http://127.0.0.1:5173/node_modules/.vite/deps/react-dom_client.js?v=559ce284:6965
+[  242113ms] [ERROR] Failed to load resource: the server responded with a status of 422 () @ https://jqfsyrtmkxrwxzneysbf.supabase.co/auth/v1/signup:0
+[  592493ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:5173/node_modules/.vite/deps/react-dom_client.js?v=559ce284:20102
+[  593049ms] [ERROR] Failed to load resource: the server responded with a status of 422 () @ https://jqfsyrtmkxrwxzneysbf.supabase.co/auth/v1/signup:0
+[  954271ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:5173/node_modules/.vite/deps/react-dom_client.js?v=559ce284:20102
+[  962924ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://jqfsyrtmkxrwxzneysbf.supabase.co/rest/v1/rpc/create_question:0
+[  972811ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:5173/node_modules/.vite/deps/react-dom_client.js?v=559ce284:20102
+[ 1004165ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://jqfsyrtmkxrwxzneysbf.supabase.co/rest/v1/rpc/get_and_reserve_question:0
+[ 1006310ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://jqfsyrtmkxrwxzneysbf.supabase.co/rest/v1/rpc/get_and_reserve_question:0
+[ 1007085ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://jqfsyrtmkxrwxzneysbf.supabase.co/rest/v1/rpc/get_and_reserve_question:0
+[ 1213512ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:5173/node_modules/.vite/deps/react-dom_client.js?v=559ce284:20102
+[ 1213888ms] [ERROR] Failed to load resource: the server responded with a status of 422 () @ https://jqfsyrtmkxrwxzneysbf.supabase.co/auth/v1/signup:0
+[ 1412495ms] [ERROR] Failed to load resource: the server responded with a status of 422 () @ https://jqfsyrtmkxrwxzneysbf.supabase.co/auth/v1/signup:0
+[ 1412501ms] ReferenceError: ConsentGate is not defined
+    at App (http://127.0.0.1:5173/src/App.tsx?t=1786119807656:173:44)
+    at Object.react_stack_bottom_frame (http://127.0.0.1:5173/node_modules/.vite/deps/react-dom_client.js?v=559ce284:18509:20)
+    at renderWithHooks (http://127.0.0.1:5173/node_modules/.vite/deps/react-dom_client.js?v=559ce284:5654:24)
+    at updateFunctionComponent (http://127.0.0.1:5173/node_modules/.vite/deps/react-dom_client.js?v=559ce284:7475:21)
+    at beginWork (http://127.0.0.1:5173/node_modules/.vite/deps/react-dom_client.js?v=559ce284:8525:20)
+    at runWithFiberInDEV (http://127.0.0.1:5173/node_modules/.vite/deps/react-dom_client.js?v=559ce284:997:72)
+    at performUnitOfWork (http://127.0.0.1:5173/node_modules/.vite/deps/react-dom_client.js?v=559ce284:12561:98)
+    at workLoopSync (http://127.0.0.1:5173/node_modules/.vite/deps/react-dom_client.js?v=559ce284:12424:43)
+    at renderRootSync (http://127.0.0.1:5173/node_modules/.vite/deps/react-dom_client.js?v=559ce284:12408:13)
+    at performWorkOnRoot (http://127.0.0.1:5173/node_modules/.vite/deps/react-dom_client.js?v=559ce284:11827:37)
+[ 1412501ms] [WARNING] %s
+
+%s
+ An error occurred in the <App> component. Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries. @ http://127.0.0.1:5173/node_modules/.vite/deps/react-dom_client.js?v=559ce284:6965
+[ 1453876ms] [ERROR] Failed to load resource: the server responded with a status of 422 () @ https://jqfsyrtmkxrwxzneysbf.supabase.co/auth/v1/signup:0
+[ 1531516ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5173/src/styles.css?t=1786119927406:0
+[ 1531517ms] [ERROR] [vite] Failed to reload /src/styles.css. This could be due to syntax errors or importing non-existent modules. (see errors above) @ http://127.0.0.1:5173/@vite/client:881
+[ 1548794ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:5173/node_modules/.vite/deps/react-dom_client.js?v=559ce284:20102
+[ 1549124ms] [ERROR] Failed to load resource: the server responded with a status of 422 () @ https://jqfsyrtmkxrwxzneysbf.supabase.co/auth/v1/signup:0

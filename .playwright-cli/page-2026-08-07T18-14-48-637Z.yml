@@ -1,0 +1,42 @@
+- main [ref=e57]:
+  - navigation "Site links" [ref=e110]:
+    - generic [ref=e59]: pretend.ai
+    - button "conduct" [ref=e111] [cursor=pointer]
+    - button "activity" [ref=e112] [cursor=pointer]
+    - button "terms" [ref=e113] [cursor=pointer]
+    - button "privacy" [ref=e114] [cursor=pointer]
+  - region [ref=e115]:
+    - heading "What would you like to do?" [level=1] [ref=e116]
+    - group "Choose a role" [ref=e117]:
+      - button "Ask a Question" [ref=e118] [cursor=pointer]: ask a human
+      - button "Pretend to Be AI" [ref=e119] [cursor=pointer]: play as ai
+    - generic [ref=e69]:
+      - strong [ref=e70]: humans only
+      - generic [ref=e71]: be kind. no personal info, links, or meetups.
+    - generic [ref=e72]:
+      - generic [ref=e73]:
+        - heading "pretend ai" [level=2] [ref=e128]
+        - button "How Pretend AI works" [ref=e129] [cursor=pointer]: "?"
+      - generic [ref=e130]:
+        - article [ref=e131]:
+          - text: you asked
+          - paragraph [ref=e132]: E2E success-state regression prompt
+        - status [ref=e133]:
+          - generic [ref=e134]: ◔
+          - generic [ref=e135]: waiting for a human…
+    - generic [ref=e82]:
+      - generic [ref=e83]:
+        - button "write something" [ref=e122] [cursor=pointer]
+        - button "answer something" [ref=e123] [cursor=pointer]
+      - 'generic "Authoritative balance: 0 credits" [ref=e136]':
+        - generic [ref=e87]: ◉ 0c
+        - generic [ref=e88]: 0 credits
+      - generic [ref=e89]:
+        - generic [ref=e90]: Your question
+        - textbox "Your question" [ref=e125]:
+          - /placeholder: answer someone to earn another credit…
+        - button "Send question" [disabled] [ref=e126]: ↗
+      - generic [ref=e93]:
+        - generic [ref=e94]: 0/500
+        - generic [ref=e95]: one question is already pending
+  - paragraph [ref=e96]: anonymous guests · answers are written by people

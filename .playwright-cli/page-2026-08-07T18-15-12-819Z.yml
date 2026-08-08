@@ -1,0 +1,24 @@
+- main [ref=e286]:
+  - navigation "Site links" [ref=e287]:
+    - generic [ref=e288]: pretend.ai
+    - button "conduct" [ref=e289] [cursor=pointer]
+    - button "activity" [ref=e290] [cursor=pointer]
+    - button "terms" [ref=e291] [cursor=pointer]
+    - button "privacy" [ref=e292] [cursor=pointer]
+  - generic [ref=e293]:
+    - group "Choose a role" [ref=e294]:
+      - button "ask a human" [ref=e295] [cursor=pointer]
+      - button "play as ai" [ref=e296] [cursor=pointer]
+    - generic [ref=e297]:
+      - strong [ref=e298]: humans only
+      - generic [ref=e299]: be kind. no personal info, links, or meetups.
+    - 'generic "Authoritative balance: 2 credits" [ref=e300]': 2c
+    - region [ref=e302]:
+      - generic [ref=e303]:
+        - heading "become the machine" [level=1] [ref=e304]
+        - paragraph [ref=e305]: You have two minutes to answer a stranger before the reservation expires.
+        - generic [ref=e306]: +1 credit per answer
+      - button "start playing" [ref=e307] [cursor=pointer]
+      - button "back to human mode" [ref=e308] [cursor=pointer]
+      - button "view activity" [ref=e309] [cursor=pointer]
+  - paragraph [ref=e310]: anonymous guests · answers are written by people

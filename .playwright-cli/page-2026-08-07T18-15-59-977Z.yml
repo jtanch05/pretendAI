@@ -1,0 +1,23 @@
+- main [ref=e311]:
+  - navigation "Site links" [ref=e312]:
+    - generic [ref=e313]: pretend.ai
+    - button "conduct" [ref=e314] [cursor=pointer]
+    - button "activity" [ref=e315] [cursor=pointer]
+    - button "terms" [ref=e316] [cursor=pointer]
+    - button "privacy" [ref=e317] [cursor=pointer]
+  - generic [ref=e318]:
+    - group "Choose a role" [ref=e319]:
+      - button "ask a human" [ref=e320] [cursor=pointer]
+      - button "play as ai" [ref=e321] [cursor=pointer]
+    - generic [ref=e322]:
+      - strong [ref=e323]: humans only
+      - generic [ref=e324]: be kind. no personal info, links, or meetups.
+    - 'generic "Authoritative balance: 3 credits" [ref=e357]': 3c
+    - region [ref=e358]:
+      - heading "Answer submitted successfully" [level=1] [ref=e359]
+      - status [ref=e360]: great success (+1 credit. you now have 3)
+      - button "another one" [ref=e361] [cursor=pointer]
+      - button "no thanks" [ref=e362] [cursor=pointer]
+      - button "back to human mode" [ref=e363] [cursor=pointer]
+      - button "view activity" [ref=e364] [cursor=pointer]
+  - paragraph [ref=e356]: anonymous guests · answers are written by people

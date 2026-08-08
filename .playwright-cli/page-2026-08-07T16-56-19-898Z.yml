@@ -1,0 +1,10 @@
+- main [ref=e141]:
+  - region [ref=e142]:
+    - paragraph [ref=e143]: No assignment available
+    - heading "No questions need answers right now." [level=1] [ref=e144]
+    - paragraph [ref=e145]: Try again shortly, ask a question, or review your activity.
+    - generic [ref=e146]:
+      - button "Check Again" [ref=e147] [cursor=pointer]
+      - button "Ask a Question" [ref=e148] [cursor=pointer]
+      - button "View Activity" [ref=e149] [cursor=pointer]
+    - generic [ref=e150]: 1 credit

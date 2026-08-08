@@ -1,0 +1,11 @@
+- main [ref=e119]:
+  - region [ref=e120]:
+    - paragraph [ref=e121]: No assignment available
+    - heading "No questions need answers right now." [level=1] [ref=e122]
+    - paragraph [ref=e123]: Try again shortly, ask a question, or review your activity.
+    - alert [ref=e124]: column reference "reservation_expires_at" is ambiguous
+    - generic [ref=e125]:
+      - button "Check Again" [ref=e126] [cursor=pointer]
+      - button "Ask a Question" [ref=e127] [cursor=pointer]
+      - button "View Activity" [ref=e128] [cursor=pointer]
+    - generic [ref=e129]: 1 credit

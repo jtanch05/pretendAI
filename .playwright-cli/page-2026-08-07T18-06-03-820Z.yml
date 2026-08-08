@@ -1,0 +1,54 @@
+- generic [active] [ref=e1]:
+  - generic:
+    - main [ref=e2]:
+      - navigation [ref=e3]:
+        - generic [ref=e4]: pretend.ai
+        - button [ref=e5] [cursor=pointer]: conduct
+        - button [ref=e6] [cursor=pointer]: activity
+        - button [ref=e7] [cursor=pointer]: terms
+        - button [ref=e8] [cursor=pointer]: privacy
+      - region [ref=e9]:
+        - heading [level=1] [ref=e10]: What would you like to do?
+        - group [ref=e11]:
+          - button [ref=e12] [cursor=pointer]: ask a human
+          - button [ref=e13] [cursor=pointer]: play as ai
+        - generic [ref=e14]:
+          - strong [ref=e15]: humans only
+          - generic [ref=e16]: be kind. no personal info, links, or meetups.
+        - generic [ref=e17]:
+          - paragraph [ref=e23]: human answers, suspiciously formatted
+          - heading [level=2] [ref=e24]: pretend ai
+          - button [ref=e25] [cursor=pointer]: "?"
+          - paragraph [ref=e26]: Ask a stranger. Or earn credits by becoming the “AI”.
+        - generic [ref=e27]:
+          - generic [ref=e28]:
+            - button [ref=e29] [cursor=pointer]: write something
+            - button [ref=e30] [cursor=pointer]: answer something
+          - generic [ref=e31]:
+            - generic [ref=e32]: ◉ 1c
+            - generic [ref=e33]: 1 credit
+          - generic [ref=e34]:
+            - generic [ref=e35]: Your question
+            - textbox [ref=e36]:
+              - /placeholder: ask anything a human can answer…
+            - button [disabled] [ref=e37]: ↗
+          - generic [ref=e38]:
+            - generic [ref=e39]: 0/500
+            - generic [ref=e40]: sending uses one credit
+      - paragraph [ref=e41]: anonymous guests · answers are written by people
+    - dialog [ref=e43]:
+      - generic [ref=e44]: ✦
+      - heading "before you enter" [level=2] [ref=e45]
+      - paragraph [ref=e46]: you must be at least 13 years old to continue.
+      - generic [ref=e47]:
+        - checkbox "i am over 13 and agree to follow the code of conduct" [ref=e48]
+        - generic [ref=e49]:
+          - text: i am over 13 and agree to follow the
+          - button "code of conduct" [ref=e50] [cursor=pointer]
+      - generic [ref=e51]:
+        - checkbox "i agree to the terms and privacy policy" [ref=e52]
+        - generic [ref=e53]:
+          - text: i agree to the
+          - button "terms and privacy policy" [ref=e54] [cursor=pointer]
+      - button "enter anonymously" [disabled] [ref=e55]
+      - generic [ref=e56]: no email, username, password, or profile required.

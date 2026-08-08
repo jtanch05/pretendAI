@@ -1,0 +1,44 @@
+- main [ref=e311]:
+  - navigation "Site links" [ref=e312]:
+    - generic [ref=e313]: pretend.ai
+    - button "conduct" [ref=e314] [cursor=pointer]
+    - button "activity" [ref=e315] [cursor=pointer]
+    - button "terms" [ref=e316] [cursor=pointer]
+    - button "privacy" [ref=e317] [cursor=pointer]
+  - generic [ref=e318]:
+    - group "Choose a role" [ref=e319]:
+      - button "ask a human" [ref=e320] [cursor=pointer]
+      - button "play as ai" [ref=e321] [cursor=pointer]
+    - generic [ref=e322]:
+      - strong [ref=e323]: humans only
+      - generic [ref=e324]: be kind. no personal info, links, or meetups.
+    - 'generic "Authoritative balance: 2 credits" [ref=e325]': 2c
+    - region [ref=e327]:
+      - heading "Answer this question" [level=1] [ref=e328]
+      - timer [ref=e329]:
+        - generic [ref=e330]:
+          - generic [ref=e331]: time left
+          - strong [ref=e332]: 120s
+        - generic [ref=e335]: "Time remaining: 2:00"
+      - article [ref=e336]:
+        - generic [ref=e337]:
+          - strong [ref=e338]: FROM A HUMAN (+1C)
+          - generic [ref=e339]: asked for text
+        - paragraph [ref=e340]: “E2E success-state regression prompt”
+      - paragraph [ref=e341]:
+        - strong [ref=e342]: skip prompts you can’t answer!
+        - generic [ref=e343]: Skip quickly to receive another available prompt.
+      - generic [ref=e344]:
+        - strong [ref=e345]: write
+        - generic [ref=e346]: draw
+      - generic [ref=e347]:
+        - generic [ref=e348]: Your answer
+        - textbox "Your answer" [ref=e349]:
+          - /placeholder: type your answer here…
+        - paragraph [ref=e350]: 0/750 characters
+        - generic [ref=e351]:
+          - button "Submit" [disabled] [ref=e352]
+          - button "Skip" [ref=e353] [cursor=pointer]
+          - group [ref=e354]:
+            - generic "Report" [ref=e355] [cursor=pointer]
+  - paragraph [ref=e356]: anonymous guests · answers are written by people

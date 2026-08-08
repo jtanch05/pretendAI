@@ -73,11 +73,11 @@ async function readSession() {
 }
 
 export const gameSession = {
-  async enter(): Promise<Player> {
+  async enter(captchaToken?: string): Promise<Player> {
     const { supabase, hasSession } = await readSession();
 
     if (!hasSession) {
-      const { error: signInError } = await supabase.auth.signInAnonymously();
+      const { error: signInError } = await supabase.auth.signInAnonymously({ options: captchaToken ? { captchaToken } : undefined });
 
       if (signInError) {
         throw new Error(signInError.message);
@@ -91,5 +91,12 @@ export const gameSession = {
     const { hasSession } = await readSession();
 
     return hasSession ? initialisePlayer() : null;
+  },
+
+  async isModerator(): Promise<boolean> {
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase.auth.getSession();
+    if (error) throw new Error(error.message);
+    return data.session?.user.app_metadata.role === "moderator";
   }
 };

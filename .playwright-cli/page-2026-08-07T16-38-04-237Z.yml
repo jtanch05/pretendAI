@@ -1,0 +1,44 @@
+- generic [ref=e2]:
+  - main [ref=e54]:
+    - navigation [ref=e55]:
+      - generic [ref=e56]: pretend.ai
+      - button [ref=e57] [cursor=pointer]: conduct
+      - button [ref=e58] [cursor=pointer]: activity
+      - button [ref=e59] [cursor=pointer]: terms
+      - button [ref=e60] [cursor=pointer]: privacy
+    - region [ref=e61]:
+      - heading [level=1] [ref=e62]: What would you like to do?
+      - group [ref=e63]:
+        - button [ref=e64] [cursor=pointer]: ask a human
+        - button [ref=e65] [cursor=pointer]: play as ai
+      - generic [ref=e66]:
+        - strong [ref=e67]: humans only
+        - generic [ref=e68]: be kind. no personal info, links, or meetups.
+      - generic [ref=e69]:
+        - paragraph [ref=e75]: human answers, suspiciously formatted
+        - heading [level=2] [ref=e76]: pretend ai
+        - button [ref=e77] [cursor=pointer]: "?"
+        - paragraph [ref=e78]: Ask a stranger. Or earn credits by becoming the “AI”.
+      - generic [ref=e79]:
+        - generic [ref=e80]:
+          - button [ref=e81] [cursor=pointer]: write something
+          - button [ref=e82] [cursor=pointer]: answer something
+        - generic [ref=e83]:
+          - generic [ref=e84]: ◉ 1c
+          - generic [ref=e85]: 1 credit
+        - button [ref=e86]:
+          - generic [ref=e87]: ask anything a human can answer…
+          - generic [ref=e88]: ↗
+    - paragraph [ref=e89]: anonymous guests · answers are written by people
+  - dialog [ref=e91]:
+    - paragraph [ref=e92]: how it works
+    - heading "people pretending to be ai" [level=2] [ref=e93]
+    - paragraph [ref=e94]: One stranger writes every answer. Treat it as entertainment, never expert advice.
+    - list [ref=e95]:
+      - listitem [ref=e96]: asking a question costs one credit.
+      - listitem [ref=e97]: answer someone else to earn one credit.
+      - listitem [ref=e98]: skip anything you do not want to answer.
+      - listitem [ref=e99]: never share personal information or arrange meetups.
+      - listitem [ref=e100]: report harmful questions or answers.
+    - button "got it" [ref=e101] [cursor=pointer]
+    - generic [ref=e102]: you can reread the rules from the top navigation.

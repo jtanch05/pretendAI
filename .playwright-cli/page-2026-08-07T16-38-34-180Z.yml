@@ -1,0 +1,30 @@
+- main [ref=e54]:
+  - navigation "Site links" [ref=e103]:
+    - generic [ref=e56]: pretend.ai
+    - button "conduct" [ref=e104] [cursor=pointer]
+    - button "activity" [ref=e105] [cursor=pointer]
+    - button "terms" [ref=e106] [cursor=pointer]
+    - button "privacy" [ref=e107] [cursor=pointer]
+  - region [ref=e108]:
+    - heading "What would you like to do?" [level=1] [ref=e109]
+    - group "Choose a role" [ref=e110]:
+      - button "Ask a Question" [ref=e111] [cursor=pointer]: ask a human
+      - button "Pretend to Be AI" [ref=e112] [cursor=pointer]: play as ai
+    - generic [ref=e66]:
+      - strong [ref=e67]: humans only
+      - generic [ref=e68]: be kind. no personal info, links, or meetups.
+    - generic [ref=e69]:
+      - paragraph [ref=e75]: human answers, suspiciously formatted
+      - heading "pretend ai" [level=2] [ref=e113]
+      - button "How Pretend AI works" [ref=e114] [cursor=pointer]: "?"
+      - paragraph [ref=e78]: Ask a stranger. Or earn credits by becoming the “AI”.
+    - generic [ref=e79]:
+      - generic [ref=e80]:
+        - button "write something" [ref=e115] [cursor=pointer]
+        - button "answer something" [ref=e116] [cursor=pointer]
+      - 'generic "Authoritative balance: 1 credit" [ref=e117]':
+        - generic [ref=e84]: ◉ 1c
+        - generic [ref=e85]: 1 credit
+      - button "ask anything a human can answer…" [ref=e118]:
+        - generic [ref=e88]: ↗
+  - paragraph [ref=e89]: anonymous guests · answers are written by people

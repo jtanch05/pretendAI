@@ -1,0 +1,10 @@
+- main [ref=e3]:
+  - region [ref=e4]:
+    - paragraph [ref=e5]: Pretend AI
+    - heading "Human intelligence. Artificially presented." [level=1] [ref=e6]
+    - paragraph [ref=e7]: Ask anything. A random person will answer as the AI.
+    - generic [ref=e8]:
+      - checkbox "I confirm that I am at least 13 years old." [ref=e9]
+      - generic [ref=e10]: I confirm that I am at least 13 years old.
+    - button "Enter Pretend AI" [disabled] [ref=e11]
+    - paragraph [ref=e12]: Powered by people, not AI. For entertainment only.

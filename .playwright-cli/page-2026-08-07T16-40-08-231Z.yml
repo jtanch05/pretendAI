@@ -1,0 +1,11 @@
+- main [ref=e168]:
+  - region [ref=e169]:
+    - paragraph [ref=e170]: No assignment available
+    - heading "No questions need answers right now." [level=1] [ref=e171]
+    - paragraph [ref=e172]: Try again shortly, ask a question, or review your activity.
+    - alert [ref=e173]: permission denied for function get_and_reserve_question
+    - generic [ref=e174]:
+      - button "Check Again" [ref=e175] [cursor=pointer]
+      - button "Ask a Question" [ref=e176] [cursor=pointer]
+      - button "View Activity" [ref=e177] [cursor=pointer]
+    - generic [ref=e178]: 1 credit

@@ -1,0 +1,11 @@
+- main [ref=e130]:
+  - region [ref=e131]:
+    - paragraph [ref=e132]: No assignment available
+    - heading "No questions need answers right now." [level=1] [ref=e133]
+    - paragraph [ref=e134]: Try again shortly, ask a question, or review your activity.
+    - alert [ref=e135]: "operator does not exist: timestamp with time zone > time with time zone"
+    - generic [ref=e136]:
+      - button "Check Again" [ref=e137] [cursor=pointer]
+      - button "Ask a Question" [ref=e138] [cursor=pointer]
+      - button "View Activity" [ref=e139] [cursor=pointer]
+    - generic [ref=e140]: 1 credit
