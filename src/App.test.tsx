@@ -5,6 +5,77 @@ import { gameSession } from "./services/gameSession";
 import { gameApi } from "./services/gameApi";
 import { history } from "./services/history";
 
+const presence = vi.hoisted(() => {
+  const state: Record<string, Array<{ mode?: string }>> = {};
+  const getUser = vi.fn().mockResolvedValue({ data: { user: null }, error: null });
+  const onAuthStateChange = vi.fn();
+  let authChangeCallback: ((event: string, session: { user: { id: string } } | null) => void) | null = null;
+  const channel: {
+    on: ReturnType<typeof vi.fn>;
+    subscribe: ReturnType<typeof vi.fn>;
+    track: ReturnType<typeof vi.fn>;
+    presenceState: ReturnType<typeof vi.fn>;
+  } = {
+    on: vi.fn(),
+    subscribe: vi.fn(),
+    track: vi.fn(),
+    presenceState: vi.fn()
+  };
+  channel.on.mockImplementation(() => channel);
+  channel.subscribe.mockImplementation((callback: (status: string) => void) => {
+    queueMicrotask(() => callback("SUBSCRIBED"));
+    return channel;
+  });
+  channel.track.mockImplementation(async (payload: { mode: string }) => {
+    state["user-1"] = [payload];
+  });
+  channel.presenceState.mockImplementation(() => state);
+  onAuthStateChange.mockImplementation((callback) => {
+    authChangeCallback = callback;
+    return { data: { subscription: { unsubscribe: vi.fn() } } };
+  });
+
+  return {
+    getUser,
+    onAuthStateChange,
+    channel,
+    signIn(userId: string) {
+      authChangeCallback?.("SIGNED_IN", { user: { id: userId } });
+    },
+    reset() {
+      Object.keys(state).forEach((key) => delete state[key]);
+      channel.on.mockClear();
+      channel.subscribe.mockClear();
+      channel.track.mockClear();
+      channel.presenceState.mockClear();
+      onAuthStateChange.mockClear();
+      authChangeCallback = null;
+      channel.on.mockImplementation(() => channel);
+      channel.subscribe.mockImplementation((callback: (status: string) => void) => {
+        queueMicrotask(() => callback("SUBSCRIBED"));
+        return channel;
+      });
+      channel.track.mockImplementation(async (payload: { mode: string }) => {
+        state["user-1"] = [payload];
+      });
+      channel.presenceState.mockImplementation(() => state);
+      onAuthStateChange.mockImplementation((callback) => {
+        authChangeCallback = callback;
+        return { data: { subscription: { unsubscribe: vi.fn() } } };
+      });
+      getUser.mockResolvedValue({ data: { user: null }, error: null });
+    }
+  };
+});
+
+vi.mock("./services/supabase", () => ({
+  getSupabaseClient: () => ({
+    auth: { getUser: presence.getUser, onAuthStateChange: presence.onAuthStateChange },
+    channel: () => presence.channel,
+    removeChannel: vi.fn()
+  })
+}));
+
 vi.mock("./services/gameSession", () => ({
   gameSession: {
     enter: vi.fn(),
@@ -35,7 +106,7 @@ vi.mock("./services/history", () => ({
   history: { saveWaitingQuestion: vi.fn(), saveSubmittedAnswer: vi.fn(), saveDeliveredAnswer: vi.fn(), latestDeliveredAnswer: vi.fn().mockResolvedValue(undefined), all: vi.fn().mockResolvedValue([]), deleteEntry: vi.fn(), clear: vi.fn() }
 }));
 vi.mock("lottie-react", () => ({
-  default: () => <div data-testid="loading-orb" />
+  default: ({ className }: { className?: string }) => <div data-testid="loading-orb" className={className} />
 }));
 
 describe("first-visit session", () => {
@@ -43,6 +114,7 @@ describe("first-visit session", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    presence.reset();
     window.localStorage.clear();
     window.localStorage.setItem("pretend-ai.consent-v1", "true");
     window.localStorage.setItem("pretend-ai.instructions-v1", "true");
@@ -64,7 +136,7 @@ describe("first-visit session", () => {
     render(<App />);
 
     expect(screen.getByTestId("loading-orb")).toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent(/loading pretend ai/i);
+    expect(screen.getByRole("status")).toHaveTextContent(/loading are u human/i);
   });
 
   it("requires consent before creating an anonymous guest and shows instructions once", async () => {
@@ -88,7 +160,7 @@ describe("first-visit session", () => {
     expect(enterButton).toBeEnabled();
     fireEvent.click(enterButton);
 
-    expect(await screen.findByRole("dialog", { name: /people pretending to be ai/i })).toBeInTheDocument();
+    expect(await screen.findByRole("dialog", { name: /your ai slop bores me/i })).toBeInTheDocument();
     await waitFor(() => expect(gameSession.enter).toHaveBeenCalledOnce());
     fireEvent.click(screen.getByRole("button", { name: /got it/i }));
 
@@ -110,8 +182,42 @@ describe("first-visit session", () => {
     expect(gameSession.enter).toHaveBeenCalledOnce();
 
     expect(screen.getByText("1 credit")).toBeInTheDocument();
+    expect(screen.getByText(/0 online \(0 human · 0 ai\)/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /ask a question/i })).toBeEnabled();
     expect(screen.getByRole("button", { name: /pretend to be ai/i })).toBeEnabled();
+  });
+
+  it("counts a signed-in human immediately after tracking presence", async () => {
+    vi.mocked(gameSession.restore).mockResolvedValue(null);
+    vi.mocked(gameSession.enter).mockResolvedValue({ creditBalance: 1, activeQuestion: null });
+    presence.getUser.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
+
+    render(<App />);
+
+    expect(await screen.findByText(/1 online \(1 human · 0 ai\)/i)).toBeInTheDocument();
+    expect(presence.channel.track).toHaveBeenCalledWith({ mode: "human" });
+  });
+
+  it("counts this human on the first render before Realtime echoes its presence", async () => {
+    vi.mocked(gameSession.restore).mockResolvedValue(null);
+    vi.mocked(gameSession.enter).mockResolvedValue({ creditBalance: 1, activeQuestion: null });
+    presence.getUser.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
+    presence.channel.track.mockImplementation(async () => undefined);
+
+    render(<App />);
+
+    expect(await screen.findByText(/1 online \(1 human · 0 ai\)/i)).toBeInTheDocument();
+  });
+
+  it("starts presence when the first anonymous user signs in without changing tabs", async () => {
+    window.localStorage.clear();
+    render(<App />);
+
+    expect(screen.getByText(/0 online \(0 human · 0 ai\)/i)).toBeInTheDocument();
+    presence.signIn("user-1");
+
+    expect(await screen.findByText(/1 online \(1 human · 0 ai\)/i)).toBeInTheDocument();
+    expect(presence.channel.track).toHaveBeenCalledWith({ mode: "human" });
   });
 
   it("restores the existing session and authoritative balance on a returning visit", async () => {
@@ -142,9 +248,26 @@ describe("first-visit session", () => {
 
     await waitFor(() => expect(history.saveWaitingQuestion).toHaveBeenCalledOnce());
     expect(screen.getByText("How are you?")).toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent(/waiting for a human/i);
+    expect(screen.getByRole("status")).toHaveTextContent(/an ai is thinking/i);
+    expect(document.querySelector(".chat-loading-orb")).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Your question" })).toBeInTheDocument();
     expect(screen.getByText("0 credits")).toBeInTheDocument();
+  });
+
+  it("creates a drawing request from the human composer", async () => {
+    vi.mocked(gameSession.restore).mockResolvedValue({ creditBalance: 1, activeQuestion: null });
+    vi.mocked(gameApi.createQuestion).mockResolvedValue({
+      id: "drawing-question", text: "Draw a horse", kind: "drawing", status: "pending", createdAt: "2026-08-07T00:00:00Z", creditBalance: 0
+    });
+
+    render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: /draw something/i }));
+    fireEvent.change(screen.getByLabelText(/your question/i), { target: { value: "Draw a horse" } });
+    fireEvent.click(screen.getByRole("button", { name: /send question/i }));
+
+    await waitFor(() => expect(gameApi.createQuestion).toHaveBeenCalledWith("Draw a horse", "drawing"));
+    expect(screen.getByText(/you asked for a drawing/i)).toBeInTheDocument();
+    expect(history.saveWaitingQuestion).toHaveBeenCalledWith(expect.objectContaining({ questionKind: "drawing" }));
   });
 
   it("keeps a waiting question in the chat after visiting and leaving the AI queue", async () => {
@@ -203,13 +326,15 @@ describe("first-visit session", () => {
   });
 
   it("keeps a player in the AI queue after skipping an assignment", async () => {
-    vi.mocked(gameSession.restore).mockResolvedValue({ creditBalance: 1, activeQuestion: null });
-    vi.mocked(gameApi.getAndReserveQuestion).mockResolvedValue({
+    const assignment = {
       id: "question-to-skip",
       text: "A prompt to skip",
       reservationExpiresAt: "2099-08-07T00:02:00Z",
       serverNow: "2099-08-07T00:00:00Z"
-    });
+    };
+    vi.mocked(gameSession.restore).mockResolvedValue({ creditBalance: 1, activeQuestion: null });
+    vi.mocked(gameApi.getCurrentReservation).mockResolvedValueOnce(null).mockResolvedValueOnce(null).mockResolvedValue(assignment);
+    vi.mocked(gameApi.getAndReserveQuestion).mockResolvedValue(assignment);
     vi.mocked(gameApi.skipQuestion).mockResolvedValue();
 
     render(<App />);
@@ -221,6 +346,35 @@ describe("first-visit session", () => {
     expect(await screen.findByRole("button", { name: /check now/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /leave queue/i })).toBeInTheDocument();
     expect(screen.queryByLabelText(/your question/i)).not.toBeInTheDocument();
+  });
+
+  it("immediately restores an active AI assignment after switching to human mode and back", async () => {
+    const assignment = {
+      id: "question-returning-player",
+      text: "A prompt that must not disappear",
+      reservationExpiresAt: "2099-08-07T00:02:00Z",
+      serverNow: "2099-08-07T00:00:00Z"
+    };
+    vi.mocked(gameSession.restore).mockResolvedValue(null);
+    vi.mocked(gameSession.enter).mockResolvedValue({ creditBalance: 1, activeQuestion: null });
+    vi.mocked(gameApi.getCurrentReservation).mockResolvedValueOnce(null).mockResolvedValue(assignment);
+    vi.mocked(gameApi.getAndReserveQuestion).mockResolvedValue(assignment);
+
+    render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: /pretend to be ai/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /start playing/i }));
+    expect(await screen.findByRole("heading", { name: /answer this question/i })).toBeInTheDocument();
+
+    vi.mocked(gameApi.getAndReserveQuestion).mockClear();
+    vi.mocked(gameApi.getAndReserveQuestion).mockRejectedValue(new Error("You already have an active assignment"));
+    vi.mocked(gameApi.getCurrentReservation).mockClear();
+
+    fireEvent.click(screen.getByRole("button", { name: "ask a human" }));
+    fireEvent.click(await screen.findByRole("button", { name: /pretend to be ai/i }));
+
+    expect(await screen.findByRole("heading", { name: /answer this question/i })).toBeInTheDocument();
+    expect(gameApi.getCurrentReservation).toHaveBeenCalled();
+    expect(gameApi.getAndReserveQuestion).not.toHaveBeenCalled();
   });
 
   it("restores a valid answerer reservation with the server deadline", async () => {
@@ -250,6 +404,41 @@ describe("first-visit session", () => {
 
     expect(await screen.findByText(/great success/i)).toHaveTextContent(/you now have 1/i);
     expect(screen.getByRole("button", { name: /another one/i })).toBeInTheDocument();
+  });
+
+  it("lets an assigned player draw and submit a drawing answer", async () => {
+    Object.defineProperty(window, "PointerEvent", { configurable: true, value: MouseEvent });
+    vi.mocked(gameSession.restore).mockResolvedValue({ creditBalance: 0, activeQuestion: null });
+    vi.mocked(gameApi.getCurrentReservation).mockResolvedValue({
+      id: "question-drawing", text: "Draw yourself", kind: "drawing", reservationExpiresAt: "2099-08-07T00:02:00Z", serverNow: "2099-08-07T00:00:00Z"
+    });
+    vi.mocked(gameApi.submitAnswer).mockResolvedValue({ id: "answer-drawing", acceptedAt: "2026-08-07T00:00:30Z", creditBalance: 1 });
+
+    render(<App />);
+    const canvas = await screen.findByRole("application", { name: /drawing canvas/i });
+    fireEvent.pointerDown(canvas, { button: 0, pointerId: 1, clientX: 20, clientY: 20 });
+    fireEvent.pointerMove(canvas, { pointerId: 1, clientX: 80, clientY: 60 });
+    fireEvent.pointerUp(canvas, { pointerId: 1, clientX: 80, clientY: 60 });
+    fireEvent.click(screen.getByRole("button", { name: /send drawing/i }));
+
+    await waitFor(() => expect(gameApi.submitAnswer).toHaveBeenCalledWith(expect.objectContaining({
+      kind: "drawing",
+      drawing: expect.objectContaining({ version: 1, width: 640, height: 400, strokes: expect.any(Array) })
+    })));
+    expect(history.saveSubmittedAnswer).toHaveBeenCalledWith(expect.objectContaining({ answerKind: "drawing" }));
+  });
+
+  it("renders a delivered drawing in the human chat", async () => {
+    const drawing = { version: 1 as const, width: 640 as const, height: 400 as const, strokes: [{ color: "#000080", width: 7, points: [{ x: 10, y: 10 }, { x: 80, y: 50 }] }] };
+    vi.mocked(gameSession.restore).mockResolvedValue({ creditBalance: 1, activeQuestion: null });
+    vi.mocked(gameApi.retrievePendingDelivery).mockResolvedValue({
+      answerId: "drawing-delivery", questionId: "drawing-question", questionText: "Draw a horse", questionKind: "drawing", answerKind: "drawing", answerText: null, drawing, answeredAt: "2026-08-07T00:00:00Z"
+    });
+
+    render(<App />);
+
+    expect(await screen.findByRole("img", { name: /drawing response to draw a horse/i })).toBeInTheDocument();
+    expect(history.saveDeliveredAnswer).toHaveBeenCalledWith(expect.objectContaining({ drawing, answerKind: "drawing" }));
   });
 
   it("shows an expired question and the refunded authoritative balance on return", async () => {
@@ -295,11 +484,11 @@ describe("first-visit session", () => {
     fireEvent.change(screen.getByLabelText("Your question"), { target: { value: "Second question" } });
     fireEvent.click(screen.getByRole("button", { name: /send question/i }));
 
-    await waitFor(() => expect(gameApi.createQuestion).toHaveBeenCalledWith("Second question"));
+    await waitFor(() => expect(gameApi.createQuestion).toHaveBeenCalledWith("Second question", "text"));
     expect(await screen.findByText("Second question")).toBeInTheDocument();
     expect(screen.getByText("First question")).toBeInTheDocument();
     expect(screen.getByText("First answer")).toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent(/waiting for a human/i);
+    expect(screen.getByRole("status")).toHaveTextContent(/an ai is thinking/i);
   });
 
   it("keeps a delivered chat visible after visiting and leaving the AI queue", async () => {
@@ -318,7 +507,7 @@ describe("first-visit session", () => {
     fireEvent.click(screen.getByRole("button", { name: /back to human mode/i }));
     expect(screen.getByText("Does this stay?")).toBeInTheDocument();
     expect(screen.getByText("Yes, it stays.")).toBeInTheDocument();
-    expect(screen.queryByText(/waiting for a human/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/an ai is thinking/i)).not.toBeInTheDocument();
   });
 
   it("does not acknowledge a delivery until a failed local save is retried", async () => {

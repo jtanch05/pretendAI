@@ -14,6 +14,7 @@ type PlayerStateRow = PlayerRow & {
   active_question_id: string | null;
   active_question_status: "pending" | "reserved" | null;
   active_question_text: string | null;
+  active_question_kind: "text" | "drawing" | null;
   active_question_created_at: string | null;
 };
 
@@ -38,6 +39,7 @@ function playerFrom(data: PlayerStateRow[] | null): Player {
           id: player.active_question_id!,
           status: player.active_question_status!,
           text: player.active_question_text!,
+          kind: player.active_question_kind ?? "text",
           createdAt: player.active_question_created_at!
         }
       : null
@@ -52,7 +54,7 @@ async function initialisePlayer(): Promise<Player> {
     throw new Error(error.message);
   }
 
-  const { data: state, error: stateError } = await supabase.rpc("get_current_player_state");
+  const { data: state, error: stateError } = await supabase.rpc("get_current_player_state_v2");
 
   if (stateError) {
     throw new Error(stateError.message);

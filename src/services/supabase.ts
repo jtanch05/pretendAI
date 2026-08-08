@@ -12,7 +12,7 @@ export function getSupabaseClient(): SupabaseClient {
 
   if (!url || !publishableKey) {
     throw new Error(
-      "Pretend AI is not configured yet. Add VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY."
+      "Are u Human? is not configured yet. Add VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY."
     );
   }
 

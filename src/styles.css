@@ -212,3 +212,130 @@ summary { cursor: pointer; font-weight: 850; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
 }
+
+/* Windows 95 visual theme — presentation only; application structure stays unchanged. */
+:root {
+  font-family: "MS Sans Serif", Tahoma, "Microsoft Sans Serif", Arial, sans-serif;
+  color: #000;
+  background: #008080;
+  --page: #008080;
+  --panel: #c0c0c0;
+  --panel-soft: #d4d0c8;
+  --line: #808080;
+  --muted: #404040;
+  --violet: #000080;
+  --violet-dark: #000080;
+  --green: #008000;
+  --gold: #c0c0c0;
+  --danger: #800000;
+}
+
+html, body { background: #008080; }
+body { background-color: #008080; font-size: 14px; }
+button, input, textarea { font-family: inherit; }
+button:focus-visible, input:focus-visible, textarea:focus-visible, a:focus-visible, summary:focus-visible { outline: 1px dotted #000; outline-offset: -4px; }
+
+.app-page { position: fixed; inset: 0; padding: 24px 16px 42px; background: transparent; }
+.site-nav { position: fixed; z-index: 15; right: 0; bottom: 0; left: 0; min-height: 32px; display: flex; justify-content: flex-start; gap: 4px; margin: 0; padding: 3px; border-top: 2px solid #fff; background: #c0c0c0; color: #000; font-size: 12px; font-weight: 400; }
+.site-nav::after { content: "Are u Human? is ready"; margin-left: auto; padding: 4px 10px; border: 1px solid #808080; border-color: #808080 #fff #fff #808080; color: #404040; }
+.site-nav button, .site-nav .nav-brand { min-height: 24px; padding: 4px 9px; border: 2px outset #fff; background: #c0c0c0; color: #000; text-transform: none; }
+.site-nav button:active { border-style: inset; }
+.site-nav button:hover { color: #000; text-decoration: none; background: #d4d0c8; }
+.nav-brand { display: flex; align-items: center; gap: 4px; font-weight: 700; letter-spacing: 0; }
+.nav-brand::before { content: "▣"; color: #000080; font-size: 15px; line-height: 10px; }
+
+.game-shell { position: relative; width: min(var(--game-shell-width), 880px); min-width: min(var(--game-shell-width), 880px); max-width: min(var(--game-shell-width), 880px); border: 2px outset #fff; border-radius: 0; background: #c0c0c0; box-shadow: none; padding-top: 27px; overflow: visible; }
+.game-shell::before, .gate-card::before, .home-card::before { content: "Are u Human?"; position: absolute; z-index: 1; top: 3px; right: 3px; left: 3px; height: 21px; padding: 3px 6px; background: #000080; color: #fff; font-size: 13px; font-weight: 700; line-height: 15px; }
+.game-shell::after, .gate-card::after, .home-card::after { content: "×"; position: absolute; z-index: 2; top: 5px; right: 5px; display: grid; width: 17px; height: 17px; place-items: center; border: 1px outset #fff; background: #c0c0c0; color: #000; font-family: Arial, sans-serif; font-size: 16px; font-weight: 700; line-height: 1; }
+.mode-tabs { height: 48px; border: 0; gap: 4px; padding: 4px; background: #c0c0c0; }
+.mode-tab { border: 2px outset #fff; background: #c0c0c0; color: #000; font-size: .9rem; font-weight: 400; text-transform: none; }
+.mode-tab:last-child { border-right: 2px outset #fff; }
+.mode-tab.active, .mode-tab.machine-active { border-style: inset; background: #fff; color: #000; box-shadow: none; font-weight: 700; }
+.mode-tab:hover { background: #d4d0c8; color: #000; }
+.community-banner { min-height: 38px; display: flex; gap: 8px; justify-content: center; padding: 8px 16px; border-top: 1px solid #808080; border-bottom: 1px solid #fff; background: #ffffcc; color: #000; text-align: left; }
+.community-banner strong { color: #800000; font-size: .85rem; text-transform: none; }
+.community-banner span { font-size: .79rem; }
+.game-stage, .chat-stage, .machine-content { background: #c0c0c0; color: #000; }
+.stage-kicker, .stage-copy, .queue-card p, .queue-card small, .skip-tip span, .fine-print, .notice, .lede { color: #404040; }
+.game-stage h2, .chat-heading h2 { color: #000; letter-spacing: 0; text-transform: none; }
+.scribble-mark i, .mini-scribble { border-color: #000080; }
+.scribble-mark i { border-radius: 0; }
+.help-button { border: 2px outset #fff; border-radius: 0; background: #c0c0c0; color: #000080; font-weight: 700; }
+.help-button:active { border-style: inset; }
+
+.composer-panel { border-top: 2px solid #808080; background: #c0c0c0; }
+.composer-tabs button, .primary-action, .role-action, .secondary-action, .machine-action, .modal-primary { border: 2px outset #fff; border-radius: 0; background: #c0c0c0; color: #000; font-weight: 400; text-transform: none; }
+.composer-tabs .selected, .machine-action.accent { border-style: inset; border-color: #808080 #fff #fff #808080; background: #000080; color: #fff; }
+.primary-action:hover:not(:disabled), .secondary-action:hover, .role-action:hover, .machine-action:hover, .modal-primary:hover:not(:disabled) { border-color: #fff; background: #d4d0c8; color: #000; }
+.primary-action:active:not(:disabled), .secondary-action:active, .role-action:active, .machine-action:active, .modal-primary:active:not(:disabled) { border-style: inset; }
+.credit-chip, .machine-credit { border: 1px inset #fff; background: #fff; color: #000; }
+.machine-credit { position: relative; z-index: auto; top: auto; right: auto; align-self: flex-end; margin: 8px 16px 0; padding: 5px 10px; font-size: .85rem; line-height: 1; }
+.prompt-bar { min-height: 58px; gap: 8px; padding: 6px; border: 2px inset #fff; border-radius: 0; background: #fff; color: #000; }
+.prompt-bar input { min-height: 42px; padding: 8px 10px; color: #000; font-size: 16px; line-height: 20px; }
+.prompt-bar input::placeholder { color: #666; }
+.send-glyph { border: 2px outset #fff; border-radius: 0; background: #c0c0c0; color: #000080; }
+.send-glyph:active:not(:disabled) { border-style: inset; }
+.composer-meta, .online-note { color: #404040; }
+
+.chat-feed { scrollbar-color: #808080 #c0c0c0; }
+.chat-feed::-webkit-scrollbar { background: #c0c0c0; }
+.chat-feed::-webkit-scrollbar-track { border: 1px inset #fff; border-radius: 0; background: #fff; }
+.chat-feed::-webkit-scrollbar-thumb { border: 2px outset #fff; border-radius: 0; background: #c0c0c0; }
+.user-message, .assistant-message, .waiting-message, .queue-card, .assignment-card, .skip-tip, .success-banner, .activity-list li, .confirm-panel, details { border: 2px inset #fff; border-radius: 0; background: #fff; color: #000; transform: none; }
+.user-message { background: #e6ffe6; }
+.assistant-message { background: #fff; }
+.user-message small, .assistant-message > small, .chat-feedback { color: #404040 !important; }
+.user-message p, .assistant-message > p { color: #000; }
+.waiting-message { background: #ffffcc; color: #000; }
+.chat-loading-orb { width: 28px; height: 28px; flex: 0 0 28px; }
+.message-actions > button, .chat-report > summary, .chat-report button { border: 2px outset #fff; border-radius: 0; background: #c0c0c0; color: #000; }
+.chat-report > summary { color: #800000; }
+.assignment-card > div, .reservation-timer > div:first-child, .reservation-timer strong { color: #000080; }
+.timer-track { border: 2px inset #fff; background: #fff; }
+.timer-track i { background: #000080; }
+.answer-tabs { border: 2px inset #fff; background: #fff; }
+.answer-tabs .selected { background: #000080; color: #fff; }
+.report-menu > summary { border: 2px outset #fff; border-radius: 0; background: #c0c0c0; color: #800000; }
+
+.drawing-editor { display: grid; gap: 8px; }
+.drawing-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 5px; border: 2px outset #fff; background: #c0c0c0; }
+.drawing-toolbar button { display: grid; width: 28px; min-width: 28px; height: 28px; place-items: center; padding: 2px; border: 2px outset #fff; border-radius: 0; background: #c0c0c0; color: #000; }
+.drawing-toolbar button.selected { border-style: inset; outline: 1px dotted #000; outline-offset: -4px; }
+.drawing-toolbar button.tool-button { width: auto; padding: 2px 8px; }
+.drawing-toolbar button:disabled { color: #808080; text-shadow: 1px 1px #fff; }
+.drawing-tool-label { margin-left: 4px; font-size: 12px; }
+.brush-size i { display: block; border-radius: 50%; background: #000; }
+.drawing-surface, .drawing-preview { display: block; width: 100%; height: auto; border: 2px inset #fff; background: #fff; }
+.drawing-surface { max-height: min(400px, 45vh); cursor: crosshair; touch-action: none; }
+.assistant-message .drawing-preview { margin-top: 8px; }
+.activity-list .drawing-preview { max-width: 360px; margin-top: 8px; }
+
+textarea, .chat-report textarea { border: 2px inset #fff; border-radius: 0; background: #fff; color: #000; }
+textarea:focus, .prompt-bar:focus-within { border-color: #000080; outline: 1px dotted #000; outline-offset: -5px; }
+.form-error { color: #800000; font-weight: 700; }
+.question-preview, .notice { border: 2px inset #fff; background: #fff; color: #000; }
+.notice { border-left: 2px inset #fff; }
+.timer { color: #000080; }
+
+.modal-backdrop { background: #00000080; backdrop-filter: none; }
+.entry-modal, .instruction-modal, .gate-card, .home-card { border: 2px outset #fff; border-radius: 0; background: #c0c0c0; color: #000; box-shadow: 2px 2px 0 #000; }
+.entry-modal, .instruction-modal { padding-top: 46px; transform: none; }
+.entry-modal h2, .instruction-modal h2, .entry-modal > p, .instruction-modal > p, .entry-modal small, .instruction-modal small, .status-message { color: #000; text-transform: none; }
+.modal-icon { color: #000080; }
+.consent-row { border: 2px inset #fff; border-radius: 0; background: #fff; }
+.consent-row input { accent-color: #000080; }
+.consent-row button { color: #000080; }
+.gate-shell, .home-shell { padding: 54px 18px; background: transparent; }
+.gate-card, .home-card { padding-top: clamp(54px, 7vw, 76px); }
+.loading-card { min-height: 330px; }
+.loading-orb { filter: drop-shadow(0 0 4px #000080); }
+.credit-balance { top: 38px; border: 2px outset #fff; background: #c0c0c0; color: #000; }
+
+@media (max-width: 620px) {
+  .app-page { padding: 24px 0 38px; }
+  .site-nav { overflow-x: auto; }
+  .site-nav::after { display: none; }
+  .site-nav button, .site-nav .nav-brand { flex: 0 0 auto; }
+  .game-shell { width: 100%; min-width: 100%; max-width: 100%; border-right: 2px outset #fff; border-left: 2px outset #fff; }
+  .gate-card, .home-card { border: 2px outset #fff; }
+}

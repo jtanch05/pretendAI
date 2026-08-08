@@ -1,6 +1,6 @@
-# Pretend AI
+# Are u Human?
 
-The initial walking skeleton for Pretend AI. A visitor confirms they are at least 13, signs in with Supabase Anonymous Auth, receives one server-authoritative starter credit, and returns to the same balance on the same browser.
+The initial walking skeleton for Are u Human?. A visitor confirms they are at least 13, signs in with Supabase Anonymous Auth, receives one server-authoritative starter credit, and returns to the same balance on the same browser.
 
 ## Run locally
 
