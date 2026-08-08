@@ -697,7 +697,6 @@ function MachineReady({ player, onStart, onHuman, onActivity, onConduct, onTerms
   return <MachineFrame player={player} onHuman={onHuman} onActivity={onActivity} onConduct={onConduct} onTerms={onTerms} onPrivacy={onPrivacy}><section className="queue-workspace" aria-labelledby="machine-ready-title">
     <div className="queue-card ready-card"><h1 id="machine-ready-title">become the machine</h1><p>You have two minutes to answer a stranger before the reservation expires.</p><small>+1 credit per answer</small></div>
     <button className="machine-action accent" type="button" onClick={onStart}>start playing</button>
-    <button className="machine-action" type="button" onClick={onHuman}>back to human mode</button>
     <button className="machine-action" type="button" onClick={onActivity}>view activity</button>
   </section></MachineFrame>;
 }
@@ -748,7 +747,6 @@ function AnswerQuestion({ player, assignment, onSkip, onReport, onSubmissionStar
     {message && <p className="form-error">{message}</p>}
     <button className="machine-action accent" type="button" onClick={() => onNext(currentPlayer)}>another one</button>
     <button className="machine-action" type="button" onClick={() => onLeave(currentPlayer)}>no thanks</button>
-    <button className="machine-action" type="button" onClick={() => onLeave(currentPlayer)}>back to human mode</button>
     <button className="machine-action" type="button" onClick={() => onActivity(currentPlayer)}>view activity</button>
   </section></MachineFrame>;
 

@@ -290,7 +290,7 @@ describe("first-visit session", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: /leave queue/i }));
     expect(screen.getByRole("button", { name: /start playing/i })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /back to human mode/i }));
+    fireEvent.click(screen.getByRole("button", { name: /ask a human/i }));
     expect(await screen.findByRole("heading", { name: /a human answered your question/i })).toBeInTheDocument();
     expect(gameApi.acknowledgeDelivery).toHaveBeenCalledWith("answer-pending");
   });
@@ -321,7 +321,7 @@ describe("first-visit session", () => {
     await screen.findByRole("button", { name: /check now/i });
 
     fireEvent.click(screen.getByRole("button", { name: /leave queue/i }));
-    fireEvent.click(screen.getByRole("button", { name: /back to human mode/i }));
+    fireEvent.click(screen.getByRole("button", { name: /ask a human/i }));
     expect(screen.getByLabelText(/your question/i)).toBeInTheDocument();
   });
 
@@ -504,7 +504,7 @@ describe("first-visit session", () => {
     fireEvent.click(await screen.findByRole("button", { name: /start playing/i }));
     fireEvent.click(await screen.findByRole("button", { name: /leave queue/i }));
     expect(screen.getByRole("button", { name: /start playing/i })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /back to human mode/i }));
+    fireEvent.click(screen.getByRole("button", { name: /ask a human/i }));
     expect(screen.getByText("Does this stay?")).toBeInTheDocument();
     expect(screen.getByText("Yes, it stays.")).toBeInTheDocument();
     expect(screen.queryByText(/an ai is thinking/i)).not.toBeInTheDocument();
