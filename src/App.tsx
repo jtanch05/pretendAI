@@ -40,7 +40,9 @@ type View =
   | { screen: "unavailable"; player: Player }
   | { screen: "activity"; player: Player }
   | { screen: "moderation"; player: Player }
-  | { screen: "rules"; player: Player };
+  | { screen: "info"; page: InfoPage; player: Player };
+
+type InfoPage = "conduct" | "terms" | "privacy";
 
 function pluralisedCredits(balance: number): string {
   return `${balance} credit${balance === 1 ? "" : "s"}`;
@@ -130,6 +132,7 @@ function OnlinePresence({ mode }: { mode: PresenceMode }) {
 export default function App() {
   const [hasConsent, setHasConsent] = useState(() => localStorage.getItem("pretend-ai.consent-v1") === "true");
   const [hasReadInstructions, setHasReadInstructions] = useState(() => localStorage.getItem("pretend-ai.instructions-v1") === "true");
+  const [showInstructions, setShowInstructions] = useState(false);
   const [view, setView] = useState<View>(() => hasConsent
     ? { screen: "restoring" }
     : { screen: "home", player: { creditBalance: 1, activeQuestion: null } });
@@ -397,23 +400,26 @@ export default function App() {
     return <>
       <Home
         player={view.player}
-        locked={!hasConsent || !hasReadInstructions}
+        locked={!hasConsent || !hasReadInstructions || showInstructions}
         onSubmit={(text, kind) => submitQuestion(view.player, text, kind)}
         pendingQuestion={pendingQuestion}
         deliveredAnswers={deliveredAnswers}
         connectionNotice={view.screen === "waiting" ? connectionNotice : null}
         onActivity={() => setView({ screen: "activity", player: view.player })}
         onModerate={() => setView({ screen: "moderation", player: view.player })}
-        onRules={() => setView({ screen: "rules", player: view.player })}
+        onConduct={() => setView({ screen: "info", page: "conduct", player: view.player })}
+        onTerms={() => setView({ screen: "info", page: "terms", player: view.player })}
+        onPrivacy={() => setView({ screen: "info", page: "privacy", player: view.player })}
+        onHelp={() => setShowInstructions(true)}
         onAnswer={() => void openAiMode(view.player)}
       />
-      {!hasConsent ? <ConsentGate error={entryError} onRules={() => setView({ screen: "rules", player: view.player })} onAccept={(captchaToken) => {
+      {!hasConsent ? <ConsentGate error={entryError} onConduct={() => setView({ screen: "info", page: "conduct", player: view.player })} onTerms={() => setView({ screen: "info", page: "terms", player: view.player })} onPrivacy={() => setView({ screen: "info", page: "privacy", player: view.player })} onAccept={(captchaToken) => {
         localStorage.setItem("pretend-ai.consent-v1", "true");
         setHasConsent(true);
         setEntryError(null);
         void enter(captchaToken, true);
-      }} /> : !hasReadInstructions ? <InstructionsModal onDone={() => {
-        localStorage.setItem("pretend-ai.instructions-v1", "true"); setHasReadInstructions(true);
+      }} /> : (!hasReadInstructions || showInstructions) ? <InstructionsModal onDone={() => {
+        localStorage.setItem("pretend-ai.instructions-v1", "true"); setHasReadInstructions(true); setShowInstructions(false);
       }} /> : null}
     </>;
   }
@@ -425,11 +431,11 @@ export default function App() {
     }} onSkip={async () => {
       await gameApi.skipQuestion();
       setView({ screen: "empty-queue", player: view.player, error: null });
-    }} onSubmissionStart={() => { answerPollingBlocked.current = true; }} onSubmissionFailure={() => { answerPollingBlocked.current = false; }} onNext={(player) => void findQuestion(player)} onLeave={(player) => setView({ screen: "home", player })} />;
+    }} onSubmissionStart={() => { answerPollingBlocked.current = true; }} onSubmissionFailure={() => { answerPollingBlocked.current = false; }} onNext={(player) => void findQuestion(player)} onLeave={(player) => setView({ screen: "home", player })} onActivity={(player) => setView({ screen: "activity", player })} onConduct={(player) => setView({ screen: "info", page: "conduct", player })} onTerms={(player) => setView({ screen: "info", page: "terms", player })} onPrivacy={(player) => setView({ screen: "info", page: "privacy", player })} />;
   }
 
   if (view.screen === "ai-ready") {
-    return <MachineReady player={view.player} onStart={() => void findQuestion(view.player)} onHuman={() => setView({ screen: "home", player: view.player })} onActivity={() => setView({ screen: "activity", player: view.player })} />;
+    return <MachineReady player={view.player} onStart={() => void findQuestion(view.player)} onHuman={() => setView({ screen: "home", player: view.player })} onActivity={() => setView({ screen: "activity", player: view.player })} onConduct={() => setView({ screen: "info", page: "conduct", player: view.player })} onTerms={() => setView({ screen: "info", page: "terms", player: view.player })} onPrivacy={() => setView({ screen: "info", page: "privacy", player: view.player })} />;
   }
 
   if (view.screen === "empty-queue") {
@@ -440,6 +446,9 @@ export default function App() {
       onHuman={() => setView({ screen: "home", player: view.player })}
       onLeaveQueue={() => setView({ screen: "ai-ready", player: view.player })}
       onActivity={() => setView({ screen: "activity", player: view.player })}
+      onConduct={() => setView({ screen: "info", page: "conduct", player: view.player })}
+      onTerms={() => setView({ screen: "info", page: "terms", player: view.player })}
+      onPrivacy={() => setView({ screen: "info", page: "privacy", player: view.player })}
     />;
   }
 
@@ -459,7 +468,9 @@ export default function App() {
     return <Activity
       player={view.player}
       onBack={() => setView({ screen: "home", player: view.player })}
-      onRules={() => setView({ screen: "rules", player: view.player })}
+      onConduct={() => setView({ screen: "info", page: "conduct", player: view.player })}
+      onTerms={() => setView({ screen: "info", page: "terms", player: view.player })}
+      onPrivacy={() => setView({ screen: "info", page: "privacy", player: view.player })}
     />;
   }
 
@@ -467,10 +478,14 @@ export default function App() {
     return <ModerationConsole player={view.player} onBack={() => setView({ screen: "home", player: view.player })} />;
   }
 
-  if (view.screen === "rules") return <Rules
+  if (view.screen === "info") return <InformationPage
     player={view.player}
+    page={view.page}
     onBack={() => setView({ screen: "home", player: view.player })}
     onActivity={() => setView({ screen: "activity", player: view.player })}
+    onConduct={() => setView({ screen: "info", page: "conduct", player: view.player })}
+    onTerms={() => setView({ screen: "info", page: "terms", player: view.player })}
+    onPrivacy={() => setView({ screen: "info", page: "privacy", player: view.player })}
   />;
 
   if (view.screen === "finding-question") {
@@ -480,7 +495,7 @@ export default function App() {
   return <LoadingCard message="Loading Are u Human?…" />;
 }
 
-function Home({ player, locked, pendingQuestion, deliveredAnswers, connectionNotice, onSubmit, onAnswer, onActivity, onModerate, onRules }: { player: Player; locked: boolean; pendingQuestion: WaitingQuestion | null; deliveredAnswers: PendingDelivery[]; connectionNotice: string | null; onSubmit: (text: string, kind: QuestionKind) => Promise<void>; onAnswer: () => void; onActivity: () => void; onModerate: () => void; onRules: () => void }) {
+function Home({ player, locked, pendingQuestion, deliveredAnswers, connectionNotice, onSubmit, onAnswer, onActivity, onModerate, onConduct, onTerms, onPrivacy, onHelp }: { player: Player; locked: boolean; pendingQuestion: WaitingQuestion | null; deliveredAnswers: PendingDelivery[]; connectionNotice: string | null; onSubmit: (text: string, kind: QuestionKind) => Promise<void>; onAnswer: () => void; onActivity: () => void; onModerate: () => void; onConduct: () => void; onTerms: () => void; onPrivacy: () => void; onHelp: () => void }) {
   const [isModerator, setIsModerator] = useState(false);
   const [question, setQuestion] = useState("");
   const [questionKind, setQuestionKind] = useState<QuestionKind>("text");
@@ -512,10 +527,10 @@ function Home({ player, locked, pendingQuestion, deliveredAnswers, connectionNot
     <main className="app-page" inert={locked} aria-hidden={locked || undefined}>
       <nav className="site-nav" aria-label="Site links">
         <span className="nav-brand">Are u Human?</span>
-        <button type="button" onClick={onRules}>conduct</button>
+        <button type="button" onClick={onConduct}>conduct</button>
         <button type="button" onClick={onActivity}>activity</button>
-        <button type="button" onClick={onRules}>terms</button>
-        <button type="button" onClick={onRules}>privacy</button>
+        <button type="button" onClick={onTerms}>terms</button>
+        <button type="button" onClick={onPrivacy}>privacy</button>
         {isModerator && <button type="button" onClick={onModerate}>moderate</button>}
       </nav>
       <section className="game-shell" aria-labelledby="home-title">
@@ -526,7 +541,7 @@ function Home({ player, locked, pendingQuestion, deliveredAnswers, connectionNot
         </div>
         <div className="community-banner"><strong>humans only</strong><span>be kind. no personal info, links, or meetups.</span></div>
         {deliveredAnswers.length > 0 || pendingQuestion ? <div className="game-stage chat-stage">
-          <div className="chat-heading"><div className="mini-scribble" aria-hidden="true" /><h2>Are u Human?</h2><button className="help-button" type="button" onClick={onRules} aria-label="How Are u Human? works">?</button></div>
+          <div className="chat-heading"><div className="mini-scribble" aria-hidden="true" /><h2>Are u Human?</h2><button className="help-button" type="button" onClick={onHelp} aria-label="How Are u Human? works">?</button></div>
           <div className="chat-feed" aria-live="polite">
             {deliveredAnswers.map((delivery) => <Fragment key={delivery.answerId}>
               <article className="user-message"><small>{delivery.questionKind === "drawing" ? "you asked for a drawing" : "you asked"}</small><p>{delivery.questionText}</p></article>
@@ -538,9 +553,8 @@ function Home({ player, locked, pendingQuestion, deliveredAnswers, connectionNot
           </div>
         </div> : <div className="game-stage">
           <div className="scribble-mark" aria-hidden="true"><i /><i /><i /><i /></div>
-          <p className="stage-kicker">human answers, suspiciously formatted</p>
           <h2>Are u Human?</h2>
-          <button className="help-button" type="button" onClick={onRules} aria-label="How Are u Human? works">?</button>
+          <button className="help-button" type="button" onClick={onHelp} aria-label="How Are u Human? works">?</button>
           <p className="stage-copy">The strongest LLM model, powered by humans.</p>
         </div>}
         <div className="composer-panel">
@@ -560,7 +574,7 @@ function Home({ player, locked, pendingQuestion, deliveredAnswers, connectionNot
   );
 }
 
-function ConsentGate({ error, onAccept, onRules }: { error: string | null; onAccept: (captchaToken?: string) => void; onRules: () => void }) {
+function ConsentGate({ error, onAccept, onConduct, onTerms, onPrivacy }: { error: string | null; onAccept: (captchaToken?: string) => void; onConduct: () => void; onTerms: () => void; onPrivacy: () => void }) {
   const [ageAccepted, setAgeAccepted] = useState(false);
   const [policyAccepted, setPolicyAccepted] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
@@ -569,9 +583,9 @@ function ConsentGate({ error, onAccept, onRules }: { error: string | null; onAcc
   const requiresCaptcha = Boolean(turnstileSiteKey && turnstileSiteKey !== "your-turnstile-site-key");
   const markCaptchaUnavailable = useCallback(() => setCaptchaUnavailable(true), []);
   return <div className="modal-backdrop"><section className="entry-modal" role="dialog" aria-modal="true" aria-labelledby="entry-title">
-    <div className="modal-icon" aria-hidden="true">✦</div><h2 id="entry-title">before you enter</h2><p>you must be at least 13 years old to continue.</p>
-    <label className="consent-row"><input type="checkbox" checked={ageAccepted} onChange={(event) => setAgeAccepted(event.target.checked)} /><span>i am over 13 and agree to follow the <button type="button" onClick={(event) => { event.preventDefault(); event.stopPropagation(); onRules(); }}>code of conduct</button></span></label>
-    <label className="consent-row"><input type="checkbox" checked={policyAccepted} onChange={(event) => setPolicyAccepted(event.target.checked)} /><span>i agree to the <button type="button" onClick={(event) => { event.preventDefault(); event.stopPropagation(); onRules(); }}>terms and privacy policy</button></span></label>
+    <div className="modal-icon" aria-hidden="true">✦</div><h2 id="entry-title">before you enter</h2><p>everyone is welcome to use Are u Human?</p>
+    <label className="consent-row"><input type="checkbox" checked={ageAccepted} onChange={(event) => setAgeAccepted(event.target.checked)} /><span>i agree to follow the <button type="button" onClick={(event) => { event.preventDefault(); event.stopPropagation(); onConduct(); }}>code of conduct</button></span></label>
+    <label className="consent-row"><input type="checkbox" checked={policyAccepted} onChange={(event) => setPolicyAccepted(event.target.checked)} /><span>i agree to the <button type="button" onClick={(event) => { event.preventDefault(); event.stopPropagation(); onTerms(); }}>terms</button> and <button type="button" onClick={(event) => { event.preventDefault(); event.stopPropagation(); onPrivacy(); }}>privacy policy</button></span></label>
     {requiresCaptcha && <TurnstileChallenge siteKey={turnstileSiteKey!} onToken={setCaptchaToken} onUnavailable={markCaptchaUnavailable} />}
     {captchaUnavailable && <p className="form-error" role="alert">The anti-abuse check could not load. Please disable blockers and try again.</p>}
     {error && <p className="form-error" role="alert">{error}</p>}
@@ -629,21 +643,26 @@ function InstructionsModal({ onDone }: { onDone: () => void }) {
   </section></div>;
 }
 
-function SiteNavigation({ onRules, onActivity }: { onRules: () => void; onActivity: () => void }) {
+function SiteNavigation({ onConduct, onActivity, onTerms, onPrivacy }: { onConduct: () => void; onActivity: () => void; onTerms: () => void; onPrivacy: () => void }) {
   return <nav className="site-nav" aria-label="Site links">
     <span className="nav-brand">Are u Human?</span>
-    <button type="button" onClick={onRules}>conduct</button>
+    <button type="button" onClick={onConduct}>conduct</button>
     <button type="button" onClick={onActivity}>activity</button>
-    <button type="button" onClick={onRules}>terms</button>
-    <button type="button" onClick={onRules}>privacy</button>
+    <button type="button" onClick={onTerms}>terms</button>
+    <button type="button" onClick={onPrivacy}>privacy</button>
   </nav>;
 }
 
-function Rules({ player, onBack, onActivity }: { player: Player; onBack: () => void; onActivity: () => void }) {
-  return <main className="home-shell"><SiteNavigation onRules={() => undefined} onActivity={onActivity} /><section className="home-card" aria-labelledby="rules-title"><p className="eyebrow">Rules & privacy</p><h1 id="rules-title">Human-powered, for entertainment.</h1><p className="lede">Every answer is written by a real person, not AI. Do not rely on Are u Human? for medical, legal, financial, safety, or other important decisions.</p><h2>Who can play</h2><p>Public beta is for people aged 13 or older in Malaysia.</p><h2>Keep it safe</h2><p>Do not share personal or contact details, harassment, threats, doxxing, self-harm encouragement, sexual content involving minors, illegal content, or plans to meet offline. Report an assigned question or saved answer when it breaks these rules.</p><h2>What is retained</h2><p>Activity stays only in this browser until you delete it. Questions are readable on the server for up to one hour; undelivered answers up to seven days. Delivered content is removed after your browser saves it. Report evidence is retained for 30 days, then purged. Operational metadata and provider backups may remain longer.</p><button className="secondary-action" type="button" onClick={onBack}>Back home</button><span className="credit-balance">{pluralisedCredits(player.creditBalance)}</span></section></main>;
+function InformationPage({ player, page, onBack, onActivity, onConduct, onTerms, onPrivacy }: { player: Player; page: InfoPage; onBack: () => void; onActivity: () => void; onConduct: () => void; onTerms: () => void; onPrivacy: () => void }) {
+  const content = page === "conduct"
+    ? <><p className="eyebrow">Code of conduct</p><h1 id="info-title">Keep the humans safe.</h1><p className="lede">Ask for help, stories, opinions, or drawings — never personal data or real-world contact.</p><h2>Do not post</h2><p>Personal or contact details, links, meetups, harassment, threats, doxxing, self-harm encouragement, hate speech, sexual content involving minors, or illegal content.</p><h2>Use reports</h2><p>Report an assigned question or saved answer that breaks these rules. Repeated misuse may restrict access.</p></>
+    : page === "terms"
+      ? <><p className="eyebrow">Terms of use</p><h1 id="info-title">Entertainment, not expert advice.</h1><p className="lede">Every answer is written by a real person, not AI. Do not rely on Are u Human? for medical, legal, financial, safety, or other important decisions.</p><h2>Who can use it</h2><p>Are u Human? is open to everyone, anywhere. By using it, you agree to follow the code of conduct.</p><h2>Credits and availability</h2><p>Each question costs one credit and an accepted answer earns one credit. Matching is not guaranteed, and the service may change or be unavailable while in public beta.</p></>
+      : <><p className="eyebrow">Privacy</p><h1 id="info-title">Anonymous by design.</h1><p className="lede">No email, username, password, or public profile is required to use Are u Human?</p><h2>What is retained</h2><p>Activity stays only in this browser until you delete it. Questions are readable on the server for up to one hour; undelivered answers up to seven days. Delivered content is removed after your browser saves it. Report evidence is retained for 30 days, then purged. Operational metadata and provider backups may remain longer.</p><h2>Your choices</h2><p>You can delete local activity at any time. Do not enter personal information in a question, answer, or drawing.</p></>;
+  return <main className="home-shell"><SiteNavigation onConduct={onConduct} onActivity={onActivity} onTerms={onTerms} onPrivacy={onPrivacy} /><section className="home-card" aria-labelledby="info-title">{content}<button className="secondary-action" type="button" onClick={onBack}>Back home</button><span className="credit-balance">{pluralisedCredits(player.creditBalance)}</span></section></main>;
 }
 
-function Activity({ player, onBack, onRules }: { player: Player; onBack: () => void; onRules: () => void }) {
+function Activity({ player, onBack, onConduct, onTerms, onPrivacy }: { player: Player; onBack: () => void; onConduct: () => void; onTerms: () => void; onPrivacy: () => void }) {
   const [entries, setEntries] = useState<WaitingHistoryEntry[]>([]);
   const [confirming, setConfirming] = useState(false);
 
@@ -651,7 +670,7 @@ function Activity({ player, onBack, onRules }: { player: Player; onBack: () => v
   async function deleteEntry(id: number) { await history.deleteEntry(id); setEntries((current) => current.filter((entry) => entry.id !== id)); }
   async function clearEntries() { await history.clear(); setEntries([]); setConfirming(false); }
 
-  return <main className="home-shell"><SiteNavigation onRules={onRules} onActivity={() => undefined} /><section className="home-card" aria-labelledby="activity-title">
+  return <main className="home-shell"><SiteNavigation onConduct={onConduct} onActivity={() => undefined} onTerms={onTerms} onPrivacy={onPrivacy} /><section className="home-card" aria-labelledby="activity-title">
     <p className="eyebrow">Activity</p><h1 id="activity-title">Saved on this browser.</h1>
     <p className="notice">History is saved only on this browser. Clearing browser data permanently removes it and cannot be recovered on another device.</p>
     {entries.length === 0 ? <p className="lede">No local activity yet.</p> : <ul className="activity-list">{entries.map((entry) => <li key={entry.id}><strong>{entry.role === "asker" ? "You asked" : "You answered"}{entry.answerKind === "drawing" ? " with a drawing" : ""}</strong><p>{entry.questionText}</p>{entry.answerText && <p>{entry.answerText}</p>}{entry.drawing && <DrawingPreview drawing={entry.drawing} label={`Drawing for ${entry.questionText}`} />}<button className="secondary-action" type="button" onClick={() => void deleteEntry(entry.id!)}>Delete</button></li>)}</ul>}
@@ -661,9 +680,9 @@ function Activity({ player, onBack, onRules }: { player: Player; onBack: () => v
   </section></main>;
 }
 
-function MachineFrame({ player, onHuman, children }: { player: Player; onHuman: () => void; children: ReactNode }) {
+function MachineFrame({ player, onHuman, onActivity, onConduct, onTerms, onPrivacy, children }: { player: Player; onHuman: () => void; onActivity: () => void; onConduct: () => void; onTerms: () => void; onPrivacy: () => void; children: ReactNode }) {
   return <main className="app-page">
-    <nav className="site-nav" aria-label="Site links"><span className="nav-brand">Are u Human?</span><button type="button" onClick={onHuman}>conduct</button><button type="button" onClick={onHuman}>activity</button><button type="button" onClick={onHuman}>terms</button><button type="button" onClick={onHuman}>privacy</button></nav>
+    <nav className="site-nav" aria-label="Site links"><span className="nav-brand">Are u Human?</span><button type="button" onClick={onConduct}>conduct</button><button type="button" onClick={onActivity}>activity</button><button type="button" onClick={onTerms}>terms</button><button type="button" onClick={onPrivacy}>privacy</button></nav>
     <section className="game-shell machine-shell">
       <div className="mode-tabs" role="group" aria-label="Choose a role"><button className="mode-tab" type="button" onClick={onHuman}>ask a human</button><button className="mode-tab machine-active" type="button">play as ai</button></div>
       <div className="community-banner"><strong>humans only</strong><span>be kind. no personal info, links, or meetups.</span></div>
@@ -674,8 +693,8 @@ function MachineFrame({ player, onHuman, children }: { player: Player; onHuman: 
   </main>;
 }
 
-function MachineReady({ player, onStart, onHuman, onActivity }: { player: Player; onStart: () => void; onHuman: () => void; onActivity: () => void }) {
-  return <MachineFrame player={player} onHuman={onHuman}><section className="queue-workspace" aria-labelledby="machine-ready-title">
+function MachineReady({ player, onStart, onHuman, onActivity, onConduct, onTerms, onPrivacy }: { player: Player; onStart: () => void; onHuman: () => void; onActivity: () => void; onConduct: () => void; onTerms: () => void; onPrivacy: () => void }) {
+  return <MachineFrame player={player} onHuman={onHuman} onActivity={onActivity} onConduct={onConduct} onTerms={onTerms} onPrivacy={onPrivacy}><section className="queue-workspace" aria-labelledby="machine-ready-title">
     <div className="queue-card ready-card"><h1 id="machine-ready-title">become the machine</h1><p>You have two minutes to answer a stranger before the reservation expires.</p><small>+1 credit per answer</small></div>
     <button className="machine-action accent" type="button" onClick={onStart}>start playing</button>
     <button className="machine-action" type="button" onClick={onHuman}>back to human mode</button>
@@ -683,7 +702,7 @@ function MachineReady({ player, onStart, onHuman, onActivity }: { player: Player
   </section></MachineFrame>;
 }
 
-function AnswerQuestion({ player, assignment, onSkip, onReport, onSubmissionStart, onSubmissionFailure, onNext, onLeave, connectionNotice }: { player: Player; assignment: AssignedQuestion; onSkip: () => Promise<void>; onReport: (reason: string) => Promise<void>; onSubmissionStart: () => void; onSubmissionFailure: () => void; onNext: (player: Player) => void; onLeave: (player: Player) => void; connectionNotice: string | null }) {
+function AnswerQuestion({ player, assignment, onSkip, onReport, onSubmissionStart, onSubmissionFailure, onNext, onLeave, onActivity, onConduct, onTerms, onPrivacy, connectionNotice }: { player: Player; assignment: AssignedQuestion; onSkip: () => Promise<void>; onReport: (reason: string) => Promise<void>; onSubmissionStart: () => void; onSubmissionFailure: () => void; onNext: (player: Player) => void; onLeave: (player: Player) => void; onActivity: (player: Player) => void; onConduct: (player: Player) => void; onTerms: (player: Player) => void; onPrivacy: (player: Player) => void; connectionNotice: string | null }) {
   const [answer, setAnswer] = useState("");
   const [drawing, setDrawing] = useState<DrawingData>(() => emptyDrawing());
   const [balance, setBalance] = useState(player.creditBalance);
@@ -723,17 +742,17 @@ function AnswerQuestion({ player, assignment, onSkip, onReport, onSubmissionStar
   }
 
   const currentPlayer = { ...player, creditBalance: submittedBalance ?? balance };
-  if (submittedBalance !== null) return <MachineFrame player={currentPlayer} onHuman={() => onLeave(currentPlayer)}><section className="machine-success" aria-labelledby="answer-success-title">
+  if (submittedBalance !== null) return <MachineFrame player={currentPlayer} onHuman={() => onLeave(currentPlayer)} onActivity={() => onActivity(currentPlayer)} onConduct={() => onConduct(currentPlayer)} onTerms={() => onTerms(currentPlayer)} onPrivacy={() => onPrivacy(currentPlayer)}><section className="machine-success" aria-labelledby="answer-success-title">
     <h1 className="sr-only" id="answer-success-title">Answer submitted successfully</h1>
     <p className="success-banner" role="status">great success (+1 credit. you now have {submittedBalance})</p>
     {message && <p className="form-error">{message}</p>}
     <button className="machine-action accent" type="button" onClick={() => onNext(currentPlayer)}>another one</button>
     <button className="machine-action" type="button" onClick={() => onLeave(currentPlayer)}>no thanks</button>
     <button className="machine-action" type="button" onClick={() => onLeave(currentPlayer)}>back to human mode</button>
-    <button className="machine-action" type="button" onClick={() => onLeave(currentPlayer)}>view activity</button>
+    <button className="machine-action" type="button" onClick={() => onActivity(currentPlayer)}>view activity</button>
   </section></MachineFrame>;
 
-  return <MachineFrame player={currentPlayer} onHuman={() => onLeave(currentPlayer)}><section className="answer-workspace" aria-labelledby="answer-title">
+  return <MachineFrame player={currentPlayer} onHuman={() => onLeave(currentPlayer)} onActivity={() => onActivity(currentPlayer)} onConduct={() => onConduct(currentPlayer)} onTerms={() => onTerms(currentPlayer)} onPrivacy={() => onPrivacy(currentPlayer)}><section className="answer-workspace" aria-labelledby="answer-title">
     <h1 className="sr-only" id="answer-title">Answer this question</h1>
     {connectionNotice && <p className="form-error" role="status">{connectionNotice}</p>}
     <ReservationTimer expiresAt={assignment.reservationExpiresAt} serverNow={assignment.serverNow} />
@@ -771,7 +790,10 @@ function EmptyQueue({
   onCheckAgain,
   onHuman,
   onLeaveQueue,
-  onActivity
+  onActivity,
+  onConduct,
+  onTerms,
+  onPrivacy
 }: {
   player: Player;
   error: string | null;
@@ -779,13 +801,16 @@ function EmptyQueue({
   onHuman: () => void;
   onLeaveQueue: () => void;
   onActivity: () => void;
+  onConduct: () => void;
+  onTerms: () => void;
+  onPrivacy: () => void;
 }) {
   useEffect(() => {
     const timer = window.setInterval(onCheckAgain, 5000);
     return () => window.clearInterval(timer);
   }, []);
 
-  return <MachineFrame player={player} onHuman={onHuman}><section className="queue-workspace" aria-labelledby="empty-title">
+  return <MachineFrame player={player} onHuman={onHuman} onActivity={onActivity} onConduct={onConduct} onTerms={onTerms} onPrivacy={onPrivacy}><section className="queue-workspace" aria-labelledby="empty-title">
     <div className="queue-card"><h1 id="empty-title">become the machine</h1><p>Answer a stranger before the reservation expires.</p><small>+1 credit per answer</small><strong><span aria-hidden="true">◔</span> waiting for a prompt…</strong></div>
     {error && <p className="form-error" role="alert">{error}</p>}
     <button className="machine-action" type="button" onClick={onCheckAgain}>check now</button><button className="machine-action" type="button" onClick={onLeaveQueue}>leave queue</button><button className="machine-action" type="button" onClick={onActivity}>view activity</button>
