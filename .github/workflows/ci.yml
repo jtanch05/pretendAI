@@ -71,7 +71,7 @@ jobs:
   deploy-production:
     name: Deploy production
     needs: [quality, database, e2e]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master' && vars.DEPLOY_ENABLED == 'true'
+    if: github.ref == 'refs/heads/master' && vars.DEPLOY_ENABLED == 'true'
     runs-on: ubuntu-latest
     environment: production
     concurrency:

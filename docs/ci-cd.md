@@ -16,6 +16,6 @@ Deployment is intentionally off until the repository owner enables it. This prev
    - `VERCEL_PROJECT_ID`
 3. Add repository variable `DEPLOY_ENABLED` with value `true`.
 
-After that, a successful push to `master` first applies Supabase migrations and then deploys the Vite build to Vercel. Turn the variable back to any other value to pause deployment without deleting the workflow.
+After that, a successful push to `master` or a manually started `master` workflow first applies Supabase migrations and then deploys the Vite build to Vercel. Turn the variable back to any other value to pause deployment without deleting the workflow.
 
 Before the first production deployment, take a Supabase backup and confirm the target project reference. The database migration is irreversible once applied to production.
