@@ -54,12 +54,16 @@ select results_eq(
   $$values (1, false)$$,
   'calling the recovery RPC again cannot award another credit'
 );
+
+reset role;
+
 select is(
   (select count(*)::integer from public.credit_ledger where user_id = '40000000-0000-0000-0000-000000000003' and reason = 'idle_credit_recovery'),
   1,
   'a recovery window posts exactly one ledger entry'
 );
 
+set local role authenticated;
 select set_config('request.jwt.claim.sub', '40000000-0000-0000-0000-000000000005', true);
 select results_eq(
   $$select credit_balance, credit_awarded from public.claim_idle_credit()$$,
