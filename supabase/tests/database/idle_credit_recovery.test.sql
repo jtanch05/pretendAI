@@ -5,6 +5,14 @@ set local search_path = public, extensions;
 
 select plan(6);
 
+insert into auth.users (id, email)
+values
+  ('40000000-0000-0000-0000-000000000001', 'idle-credit-1@example.test'),
+  ('40000000-0000-0000-0000-000000000002', 'idle-credit-2@example.test'),
+  ('40000000-0000-0000-0000-000000000003', 'idle-credit-3@example.test'),
+  ('40000000-0000-0000-0000-000000000004', 'idle-credit-4@example.test'),
+  ('40000000-0000-0000-0000-000000000005', 'idle-credit-5@example.test');
+
 set local session_replication_role = replica;
 
 insert into public.profiles (user_id, credit_balance, status, zero_credit_since)
