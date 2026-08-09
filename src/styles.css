@@ -295,6 +295,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, a:focus-visib
 .primary-action:hover:not(:disabled), .secondary-action:hover, .role-action:hover, .machine-action:hover, .modal-primary:hover:not(:disabled) { border-color: #fff; background: #d4d0c8; color: #000; }
 .primary-action:active:not(:disabled), .secondary-action:active, .role-action:active, .machine-action:active, .modal-primary:active:not(:disabled) { border-style: inset; }
 .credit-chip, .machine-credit { border: 1px inset #fff; background: #fff; color: #000; }
+.idle-credit-countdown { display: inline-block; margin: 0 0 10px 8px; padding: 5px 8px; border: 1px solid; border-color: #808080 #fff #fff #808080; color: #000080; font-size: 12px; }
 .machine-credit { position: relative; z-index: auto; top: auto; right: auto; align-self: flex-end; margin: 8px 16px 0; padding: 5px 10px; font-size: .85rem; line-height: 1; }
 .prompt-bar { min-height: 58px; gap: 8px; padding: 6px; border: 2px inset #fff; border-radius: 0; background: #fff; color: #000; }
 .prompt-bar input { min-height: 42px; padding: 8px 10px; color: #000; font-size: 16px; line-height: 20px; }

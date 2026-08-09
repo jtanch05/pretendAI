@@ -6,6 +6,13 @@ export type Player = {
   activeQuestion: WaitingQuestion | null;
 };
 
+export type IdleCreditStatus = {
+  creditBalance: number;
+  availableAt: string | null;
+  serverNow: string;
+  awarded: boolean;
+};
+
 type PlayerRow = {
   credit_balance: number;
 };
@@ -16,6 +23,13 @@ type PlayerStateRow = PlayerRow & {
   active_question_text: string | null;
   active_question_kind: "text" | "drawing" | null;
   active_question_created_at: string | null;
+};
+
+type IdleCreditStatusRow = {
+  credit_balance: number;
+  idle_credit_available_at: string | null;
+  server_now: string;
+  credit_awarded: boolean;
 };
 
 function playerFrom(data: PlayerStateRow[] | null): Player {
@@ -93,6 +107,21 @@ export const gameSession = {
     const { hasSession } = await readSession();
 
     return hasSession ? initialisePlayer() : null;
+  },
+
+  async claimIdleCredit(): Promise<IdleCreditStatus> {
+    const { data, error } = await getSupabaseClient().rpc("claim_idle_credit");
+    const status = (data as IdleCreditStatusRow[] | null)?.[0];
+
+    if (error) throw new Error(error.message);
+    if (!status) throw new Error("The server did not return the idle-credit status.");
+
+    return {
+      creditBalance: status.credit_balance,
+      availableAt: status.idle_credit_available_at,
+      serverNow: status.server_now,
+      awarded: status.credit_awarded
+    };
   },
 
   async isModerator(): Promise<boolean> {

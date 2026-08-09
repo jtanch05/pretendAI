@@ -87,6 +87,7 @@ vi.mock("./services/gameSession", () => ({
   gameSession: {
     enter: vi.fn(),
     restore: vi.fn().mockResolvedValue(null),
+    claimIdleCredit: vi.fn(),
     isModerator: vi.fn().mockResolvedValue(false)
   }
 }));
@@ -124,8 +125,14 @@ describe("first-visit session", () => {
     presence.reset();
     window.localStorage.clear();
     window.localStorage.setItem("pretend-ai.consent-v1", "true");
-    window.localStorage.setItem("pretend-ai.instructions-v1", "true");
+    window.localStorage.setItem("pretend-ai.instructions-v2", "true");
     vi.mocked(gameSession.restore).mockResolvedValue(null);
+    vi.mocked(gameSession.claimIdleCredit).mockResolvedValue({
+      creditBalance: 0,
+      availableAt: new Date(Date.now() + 5 * 60_000).toISOString(),
+      serverNow: new Date().toISOString(),
+      awarded: false
+    });
     vi.mocked(gameSession.isModerator).mockResolvedValue(false);
     vi.mocked(gameApi.getAndReserveQuestion).mockResolvedValue(null);
     vi.mocked(gameApi.getCurrentReservation).mockResolvedValue(null);
@@ -168,12 +175,13 @@ describe("first-visit session", () => {
     fireEvent.click(enterButton);
 
     expect(await screen.findByRole("dialog", { name: /your ai slop bores me/i })).toBeInTheDocument();
+    expect(screen.getByText(/if your balance stays at 0 for 5 minutes/i)).toBeInTheDocument();
     await waitFor(() => expect(gameSession.enter).toHaveBeenCalledOnce());
     fireEvent.click(screen.getByRole("button", { name: /got it/i }));
 
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     expect(window.localStorage.getItem("pretend-ai.consent-v1")).toBe("true");
-    expect(window.localStorage.getItem("pretend-ai.instructions-v1")).toBe("true");
+    expect(window.localStorage.getItem("pretend-ai.instructions-v2")).toBe("true");
   });
 
   it("opens the game directly with an invisible anonymous guest identity", async () => {
@@ -238,6 +246,31 @@ describe("first-visit session", () => {
     });
 
     expect(screen.getByText("3 credits")).toBeInTheDocument();
+  });
+
+  it("shows the recovery countdown while a zero-credit player waits", async () => {
+    vi.mocked(gameSession.restore).mockResolvedValue({ creditBalance: 0, activeQuestion: null });
+
+    render(<App />);
+
+    await waitFor(() => expect(gameSession.claimIdleCredit).toHaveBeenCalledOnce());
+    expect(screen.getByText(/free credit in \d:\d\d/i)).toBeInTheDocument();
+    expect(screen.getByText("0 credits")).toBeInTheDocument();
+  });
+
+  it("updates the displayed balance only after the server awards an idle credit", async () => {
+    vi.mocked(gameSession.restore).mockResolvedValue({ creditBalance: 0, activeQuestion: null });
+    vi.mocked(gameSession.claimIdleCredit).mockResolvedValue({
+      creditBalance: 1,
+      availableAt: null,
+      serverNow: new Date().toISOString(),
+      awarded: true
+    });
+
+    render(<App />);
+
+    expect(await screen.findByText("1 credit")).toBeInTheDocument();
+    expect(gameSession.claimIdleCredit).toHaveBeenCalledOnce();
   });
 
   it("spends a credit and saves the waiting question locally", async () => {

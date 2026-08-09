@@ -230,6 +230,7 @@ Credits create a simple give-and-take economy.
 | First anonymous session | +1 |
 | Ask a question | -1 |
 | Submit a valid answer | +1 |
+| Balance remains at 0 for five minutes | Recovery +1 |
 | Skip | 0 |
 | Timeout | 0 |
 | Receive Like | 0 |
@@ -249,7 +250,9 @@ Rules:
 
 When the user has zero credits:
 
-> You need one credit to ask. Answer someone else's question to earn it.
+> You need one credit to ask. Answer someone else's question to earn one, or wait five minutes for one recovery credit.
+
+The recovery timer starts whenever the authoritative balance reaches zero. It resets when a player earns or is refunded credit, never grants more than one credit for the same zero-credit window, and is enforced transactionally by the server.
 
 Primary action:
 
@@ -1290,6 +1293,7 @@ create_profile_with_starter_credit()
 create_question()
 get_and_reserve_question()
 submit_answer()
+claim_idle_credit()
 skip_question()
 report_question()
 retrieve_pending_delivery()

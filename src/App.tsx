@@ -48,6 +48,7 @@ type InfoPage = "conduct" | "terms" | "privacy";
 // Realtime delivers normal waiting-question updates. These requests only make
 // the UI recover if the WebSocket event was missed or the connection is down.
 const ACTIVE_STATE_POLL_INTERVAL_MS = 60_000;
+const IDLE_CREDIT_CHECK_RETRY_MS = 60_000;
 
 type PresenceMode = "human" | "ai";
 
@@ -161,7 +162,7 @@ function WindowChrome() {
 export default function App() {
   const { t } = useLanguage();
   const [hasConsent, setHasConsent] = useState(() => localStorage.getItem("pretend-ai.consent-v1") === "true");
-  const [hasReadInstructions, setHasReadInstructions] = useState(() => localStorage.getItem("pretend-ai.instructions-v1") === "true");
+  const [hasReadInstructions, setHasReadInstructions] = useState(() => localStorage.getItem("pretend-ai.instructions-v2") === "true");
   const [showInstructions, setShowInstructions] = useState(false);
   const [view, setView] = useState<View>(() => hasConsent
     ? { screen: "restoring" }
@@ -172,13 +173,53 @@ export default function App() {
   const [deliveredHistory, setDeliveredHistory] = useState<PendingDelivery[]>([]);
   const [realtimeRefresh, setRealtimeRefresh] = useState(0);
   const [isPageVisible, setIsPageVisible] = useState(() => document.visibilityState !== "hidden");
+  const [idleCreditAvailableAt, setIdleCreditAvailableAt] = useState<string | null>(null);
+  const [idleCreditServerNow, setIdleCreditServerNow] = useState<string | null>(null);
   const answerPollingBlocked = useRef(false);
+
+  const updatePlayerBalance = useCallback((creditBalance: number) => {
+    setView((current) => current.screen === "restoring"
+      ? current
+      : { ...current, player: { ...current.player, creditBalance } });
+  }, []);
 
   useEffect(() => {
     const updateVisibility = () => setIsPageVisible(document.visibilityState !== "hidden");
     document.addEventListener("visibilitychange", updateVisibility);
     return () => document.removeEventListener("visibilitychange", updateVisibility);
   }, []);
+
+  useEffect(() => {
+    if (view.screen === "restoring" || view.player.creditBalance !== 0 || !isPageVisible) {
+      setIdleCreditAvailableAt(null);
+      setIdleCreditServerNow(null);
+      return;
+    }
+
+    let current = true;
+    let timer: number | null = null;
+    const check = async () => {
+      try {
+        const status = await gameSession.claimIdleCredit();
+        if (!current) return;
+        setIdleCreditAvailableAt(status.availableAt);
+        setIdleCreditServerNow(status.serverNow);
+        if (status.creditBalance !== view.player.creditBalance) updatePlayerBalance(status.creditBalance);
+        if (status.creditBalance === 0 && status.availableAt) {
+          const delay = Math.max(0, Date.parse(status.availableAt) - Date.parse(status.serverNow));
+          timer = window.setTimeout(() => void check(), delay + 25);
+        }
+      } catch {
+        if (current) timer = window.setTimeout(() => void check(), IDLE_CREDIT_CHECK_RETRY_MS);
+      }
+    };
+
+    void check();
+    return () => {
+      current = false;
+      if (timer !== null) window.clearTimeout(timer);
+    };
+  }, [isPageVisible, updatePlayerBalance, view]);
 
   useEffect(() => {
     if (view.screen !== "restoring") {
@@ -442,6 +483,8 @@ export default function App() {
         onSubmit={(text, kind) => submitQuestion(view.player, text, kind)}
         pendingQuestion={pendingQuestion}
         deliveredAnswers={deliveredAnswers}
+        idleCreditAvailableAt={idleCreditAvailableAt}
+        idleCreditServerNow={idleCreditServerNow}
         connectionNotice={view.screen === "waiting" ? connectionNotice : null}
         onActivity={() => setView({ screen: "activity", player: view.player })}
         onModerate={() => setView({ screen: "moderation", player: view.player })}
@@ -457,7 +500,7 @@ export default function App() {
         setEntryError(null);
         void enter(captchaToken, true);
       }} /> : (!hasReadInstructions || showInstructions) ? <InstructionsModal onDone={() => {
-        localStorage.setItem("pretend-ai.instructions-v1", "true"); setHasReadInstructions(true); setShowInstructions(false);
+        localStorage.setItem("pretend-ai.instructions-v2", "true"); setHasReadInstructions(true); setShowInstructions(false);
       }} /> : null}
     </>;
   }
@@ -533,7 +576,7 @@ export default function App() {
   return <LoadingCard message={t("loading")} />;
 }
 
-function Home({ player, locked, pendingQuestion, deliveredAnswers, connectionNotice, onSubmit, onAnswer, onActivity, onModerate, onConduct, onTerms, onPrivacy, onHelp }: { player: Player; locked: boolean; pendingQuestion: WaitingQuestion | null; deliveredAnswers: PendingDelivery[]; connectionNotice: string | null; onSubmit: (text: string, kind: QuestionKind) => Promise<void>; onAnswer: () => void; onActivity: () => void; onModerate: () => void; onConduct: () => void; onTerms: () => void; onPrivacy: () => void; onHelp: () => void }) {
+function Home({ player, locked, pendingQuestion, deliveredAnswers, idleCreditAvailableAt, idleCreditServerNow, connectionNotice, onSubmit, onAnswer, onActivity, onModerate, onConduct, onTerms, onPrivacy, onHelp }: { player: Player; locked: boolean; pendingQuestion: WaitingQuestion | null; deliveredAnswers: PendingDelivery[]; idleCreditAvailableAt: string | null; idleCreditServerNow: string | null; connectionNotice: string | null; onSubmit: (text: string, kind: QuestionKind) => Promise<void>; onAnswer: () => void; onActivity: () => void; onModerate: () => void; onConduct: () => void; onTerms: () => void; onPrivacy: () => void; onHelp: () => void }) {
   const { t } = useLanguage();
   const [isModerator, setIsModerator] = useState(false);
   const [question, setQuestion] = useState("");
@@ -599,6 +642,7 @@ function Home({ player, locked, pendingQuestion, deliveredAnswers, connectionNot
         <div className="composer-panel">
           <div className="composer-tabs" role="group" aria-label={t("chooseResponse")}><button className={questionKind === "text" ? "selected" : ""} type="button" onClick={() => { setQuestionKind("text"); focusQuestion(); }}>{t("writeSomething")}</button><button className={questionKind === "drawing" ? "selected" : ""} type="button" onClick={() => { setQuestionKind("drawing"); focusQuestion(); }}>{t("drawSomething")}</button></div>
           <span className="credit-chip" aria-label={t("balance", { credits: t(player.creditBalance === 1 ? "credit" : "credits", { count: player.creditBalance }) })}><span aria-hidden="true">◉ {player.creditBalance}c</span><span className="sr-only">{t(player.creditBalance === 1 ? "credit" : "credits", { count: player.creditBalance })}</span></span>
+          {player.creditBalance === 0 && <IdleCreditCountdown availableAt={idleCreditAvailableAt} serverNow={idleCreditServerNow} />}
           <form className="prompt-bar" onSubmit={submit}>
             <label className="sr-only" htmlFor="home-question">{t("yourQuestion")}</label>
             <input id="home-question" value={question} maxLength={500} placeholder={t(pendingQuestion ? "earnPlaceholder" : questionKind === "drawing" ? "drawPlaceholder" : "askPlaceholder")} onChange={(event) => setQuestion(event.target.value)} />
@@ -611,6 +655,24 @@ function Home({ player, locked, pendingQuestion, deliveredAnswers, connectionNot
       </section>
     </main>
   );
+}
+
+function IdleCreditCountdown({ availableAt, serverNow }: { availableAt: string | null; serverNow: string | null }) {
+  const { t } = useLanguage();
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    if (!availableAt || !serverNow) return;
+    const startedAt = Date.now();
+    setElapsed(0);
+    const timer = window.setInterval(() => setElapsed(Date.now() - startedAt), 1000);
+    return () => window.clearInterval(timer);
+  }, [availableAt, serverNow]);
+
+  if (!availableAt || !serverNow) return null;
+  const remainingSeconds = Math.max(0, Math.ceil((Date.parse(availableAt) - Date.parse(serverNow) - elapsed) / 1000));
+  const time = `${Math.floor(remainingSeconds / 60)}:${String(remainingSeconds % 60).padStart(2, "0")}`;
+  return <span className="idle-credit-countdown">{t("idleCreditCountdown", { time })}</span>;
 }
 
 function ConsentGate({ error, onAccept, onConduct, onTerms, onPrivacy }: { error: string | null; onAccept: (captchaToken?: string) => void; onConduct: () => void; onTerms: () => void; onPrivacy: () => void }) {
@@ -680,7 +742,7 @@ function InstructionsModal({ onDone }: { onDone: () => void }) {
   return <div className="modal-backdrop"><section className="instruction-modal" role="dialog" aria-modal="true" aria-labelledby="instruction-title">
     <p className="eyebrow">{t("howItWorks")}</p><h2 id="instruction-title">{t("instructionTitle")}</h2>
     <p>{t("instructionIntro")}</p>
-    <ul><li>{t("ruleCost")}</li><li>{t("ruleEarn")}</li><li>{t("ruleSkip")}</li><li>{t("ruleOne")}</li><li>{t("ruleNice")}</li><li>{t("ruleReport")}</li></ul>
+    <ul><li>{t("ruleCost")}</li><li>{t("ruleEarn")}</li><li>{t("ruleIdleCredit")}</li><li>{t("ruleSkip")}</li><li>{t("ruleOne")}</li><li>{t("ruleNice")}</li><li>{t("ruleReport")}</li></ul>
     <button className="modal-primary" type="button" onClick={onDone}>{t("gotIt")}</button><small>{t("rereadRules")}</small>
   </section></div>;
 }

@@ -10,7 +10,8 @@ It has a Windows 95-inspired interface, but every response comes from a person â
 2. Spend one credit to ask for a written answer or a drawing.
 3. Another available person can reserve and answer your prompt.
 4. Switch to **play as ai** to answer strangers' prompts and earn one credit per accepted answer.
-5. Your delivered answers and activity are saved locally in your browser.
+5. If your balance remains at zero for five minutes, receive one recovery credit.
+6. Your delivered answers and activity are saved locally in your browser.
 
 One question can wait at a time. Reservations expire after two minutes so unanswered prompts return to the queue.
 
