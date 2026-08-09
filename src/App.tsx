@@ -8,6 +8,7 @@ import { getSupabaseClient } from "./services/supabase";
 import { DrawingCanvas, DrawingPreview } from "./components/DrawingCanvas";
 import { emptyDrawing, type DrawingData } from "./types/drawing";
 import aiOrbLoader from "./assets/ai-orb-loader.json";
+import { useLanguage } from "./language";
 
 type TurnstileApi = {
   render: (element: HTMLElement, options: {
@@ -44,13 +45,14 @@ type View =
 
 type InfoPage = "conduct" | "terms" | "privacy";
 
-function pluralisedCredits(balance: number): string {
-  return `${balance} credit${balance === 1 ? "" : "s"}`;
-}
+// Realtime delivers normal waiting-question updates. These requests only make
+// the UI recover if the WebSocket event was missed or the connection is down.
+const ACTIVE_STATE_POLL_INTERVAL_MS = 60_000;
 
 type PresenceMode = "human" | "ai";
 
 function OnlinePresence({ mode }: { mode: PresenceMode }) {
+  const { t } = useLanguage();
   const [counts, setCounts] = useState({ human: 0, ai: 0 });
 
   useEffect(() => {
@@ -126,10 +128,11 @@ function OnlinePresence({ mode }: { mode: PresenceMode }) {
   }, [mode]);
 
   const online = counts.human + counts.ai;
-  return <p className="online-note" aria-live="polite"><span>{online} online ({counts.human} human · {counts.ai} ai)</span><br /><span>humans make mistakes because that's what makes us human</span></p>;
+  return <p className="online-note" aria-live="polite"><span>{t("online", { online, human: counts.human, ai: counts.ai })}</span><br /><span>{t("humanTagline")}</span></p>;
 }
 
 export default function App() {
+  const { t } = useLanguage();
   const [hasConsent, setHasConsent] = useState(() => localStorage.getItem("pretend-ai.consent-v1") === "true");
   const [hasReadInstructions, setHasReadInstructions] = useState(() => localStorage.getItem("pretend-ai.instructions-v1") === "true");
   const [showInstructions, setShowInstructions] = useState(false);
@@ -141,7 +144,14 @@ export default function App() {
   const [lastDelivery, setLastDelivery] = useState<PendingDelivery | null>(null);
   const [deliveredHistory, setDeliveredHistory] = useState<PendingDelivery[]>([]);
   const [realtimeRefresh, setRealtimeRefresh] = useState(0);
+  const [isPageVisible, setIsPageVisible] = useState(() => document.visibilityState !== "hidden");
   const answerPollingBlocked = useRef(false);
+
+  useEffect(() => {
+    const updateVisibility = () => setIsPageVisible(document.visibilityState !== "hidden");
+    document.addEventListener("visibilitychange", updateVisibility);
+    return () => document.removeEventListener("visibilitychange", updateVisibility);
+  }, []);
 
   useEffect(() => {
     if (view.screen !== "restoring") {
@@ -218,7 +228,7 @@ export default function App() {
           void enter(undefined, true);
         }
       })
-      .catch((restoreError: unknown) => {
+      .catch(() => {
         if (!isCurrent) return;
         setView({ screen: "home", player: { creditBalance: 1, activeQuestion: null } });
       });
@@ -245,6 +255,9 @@ export default function App() {
   useEffect(() => {
     const hasWaitingQuestion = view.screen === "waiting" || (view.screen === "home" && Boolean(view.player.activeQuestion));
     if (!hasWaitingQuestion && view.screen !== "answering") return;
+    // Do not keep querying while this tab is in the background. Returning to
+    // the tab immediately runs one recovery check through this effect.
+    if (!isPageVisible) return;
     let current = true;
     const poll = async () => {
       try {
@@ -259,12 +272,12 @@ export default function App() {
           if (current && !answerPollingBlocked.current && !reservation) setView({ screen: "home", player: view.player });
         }
         if (current) setConnectionNotice(null);
-      } catch { if (current) setConnectionNotice("Connection lost. We’ll retry automatically; your server state is safe."); }
+      } catch { if (current) setConnectionNotice(t("connectionLost")); }
     };
     void poll();
-    const timer = window.setInterval(() => void poll(), 15000);
+    const timer = window.setInterval(() => void poll(), ACTIVE_STATE_POLL_INTERVAL_MS);
     return () => { current = false; window.clearInterval(timer); };
-  }, [view, realtimeRefresh]);
+  }, [view, realtimeRefresh, isPageVisible]);
 
   useEffect(() => {
     const activeQuestion = view.screen === "waiting"
@@ -281,16 +294,13 @@ export default function App() {
     try {
       const client = getSupabaseClient();
       supabase = client;
-      void client.auth.getUser().then(({ data, error }) => {
-        if (!current || error || !data.user) return;
-        channel = client
-          .channel(`question-state:${activeQuestion.id}`)
-          .on("postgres_changes", {
-            event: "UPDATE",
-            schema: "public",
-            table: "question_jobs",
-            filter: `asker_id=eq.${data.user.id}`
-          }, () => {
+      void client.auth.getSession().then(({ data, error }) => {
+        if (!current || error || !data.session) return;
+        void client.realtime.setAuth(data.session.access_token).then(() => {
+          if (!current) return;
+          channel = client
+          .channel(`question-state:${activeQuestion.id}`, { config: { private: true } })
+          .on("broadcast", { event: "question-lifecycle" }, () => {
             if (current) {
               setRealtimeRefresh((value) => value + 1);
             }
@@ -298,9 +308,10 @@ export default function App() {
           .subscribe((status) => {
             if (!current) return;
             if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
-              setConnectionNotice("Live updates disconnected. We’ll keep checking automatically.");
+              setConnectionNotice(t("liveDisconnected"));
             }
           });
+        });
       });
     } catch {
       // Polling remains the correctness path when Realtime is unavailable.
@@ -489,13 +500,14 @@ export default function App() {
   />;
 
   if (view.screen === "finding-question") {
-    return <LoadingCard message="Finding a question that needs a human answer…" />;
+    return <LoadingCard message={t("findingQuestion")} />;
   }
 
-  return <LoadingCard message="Loading Are u Human?…" />;
+  return <LoadingCard message={t("loading")} />;
 }
 
 function Home({ player, locked, pendingQuestion, deliveredAnswers, connectionNotice, onSubmit, onAnswer, onActivity, onModerate, onConduct, onTerms, onPrivacy, onHelp }: { player: Player; locked: boolean; pendingQuestion: WaitingQuestion | null; deliveredAnswers: PendingDelivery[]; connectionNotice: string | null; onSubmit: (text: string, kind: QuestionKind) => Promise<void>; onAnswer: () => void; onActivity: () => void; onModerate: () => void; onConduct: () => void; onTerms: () => void; onPrivacy: () => void; onHelp: () => void }) {
+  const { t } = useLanguage();
   const [isModerator, setIsModerator] = useState(false);
   const [question, setQuestion] = useState("");
   const [questionKind, setQuestionKind] = useState<QuestionKind>("text");
@@ -525,47 +537,47 @@ function Home({ player, locked, pendingQuestion, deliveredAnswers, connectionNot
   }
   return (
     <main className="app-page" inert={locked} aria-hidden={locked || undefined}>
-      <nav className="site-nav" aria-label="Site links">
+      <nav className="site-nav" aria-label={t("siteLinks")}>
         <span className="nav-brand">Are u Human?</span>
-        <button type="button" onClick={onConduct}>conduct</button>
-        <button type="button" onClick={onActivity}>activity</button>
-        <button type="button" onClick={onTerms}>terms</button>
-        <button type="button" onClick={onPrivacy}>privacy</button>
-        {isModerator && <button type="button" onClick={onModerate}>moderate</button>}
+        <button type="button" onClick={onConduct}>{t("conduct")}</button>
+        <button type="button" onClick={onActivity}>{t("activity")}</button>
+        <button type="button" onClick={onTerms}>{t("terms")}</button>
+        <button type="button" onClick={onPrivacy}>{t("privacy")}</button>
+        {isModerator && <button type="button" onClick={onModerate}>{t("moderate")}</button>}
       </nav>
       <section className="game-shell" aria-labelledby="home-title">
-        <h1 className="sr-only" id="home-title">What would you like to do?</h1>
-        <div className="mode-tabs" role="group" aria-label="Choose a role">
-          <button className="mode-tab active" aria-label="Ask a Question" type="button" onClick={focusQuestion}>ask a human</button>
-          <button className="mode-tab" aria-label="Pretend to Be AI" type="button" onClick={onAnswer}>play as ai</button>
+        <h1 className="sr-only" id="home-title">{t("chooseAction")}</h1>
+        <div className="mode-tabs" role="group" aria-label={t("chooseRole")}>
+          <button className="mode-tab active" aria-label={t("askQuestion")} type="button" onClick={focusQuestion}>{t("askHuman")}</button>
+          <button className="mode-tab" aria-label={t("pretendAi")} type="button" onClick={onAnswer}>{t("playAi")}</button>
         </div>
-        <div className="community-banner"><strong>humans only</strong><span>be kind. no personal info, links, or meetups.</span></div>
+        <div className="community-banner"><strong>{t("humansOnly")}</strong><span>{t("communityRule")}</span></div>
         {deliveredAnswers.length > 0 || pendingQuestion ? <div className="game-stage chat-stage">
-          <div className="chat-heading"><div className="mini-scribble" aria-hidden="true" /><h2>Are u Human?</h2><button className="help-button" type="button" onClick={onHelp} aria-label="How Are u Human? works">?</button></div>
+          <div className="chat-heading"><div className="mini-scribble" aria-hidden="true" /><h2>Are u Human?</h2><button className="help-button" type="button" onClick={onHelp} aria-label={t("helpLabel")}>?</button></div>
           <div className="chat-feed" aria-live="polite">
             {deliveredAnswers.map((delivery) => <Fragment key={delivery.answerId}>
-              <article className="user-message"><small>{delivery.questionKind === "drawing" ? "you asked for a drawing" : "you asked"}</small><p>{delivery.questionText}</p></article>
+              <article className="user-message"><small>{t(delivery.questionKind === "drawing" ? "youAskedDrawing" : "youAsked")}</small><p>{delivery.questionText}</p></article>
               <DeliveredChat delivery={delivery} />
             </Fragment>)}
-            {pendingQuestion && <><article className="user-message"><small>{pendingQuestion.kind === "drawing" ? "you asked for a drawing" : "you asked"}</small><p>{pendingQuestion.text}</p></article>
-              <div className="waiting-message" role="status"><Lottie className="chat-loading-orb" animationData={aiOrbLoader} loop aria-hidden="true" /><span>an AI is thinking…</span></div></>}
+            {pendingQuestion && <><article className="user-message"><small>{t(pendingQuestion.kind === "drawing" ? "youAskedDrawing" : "youAsked")}</small><p>{pendingQuestion.text}</p></article>
+              <div className="waiting-message" role="status"><Lottie className="chat-loading-orb" animationData={aiOrbLoader} loop aria-hidden="true" /><span>{t("aiThinking")}</span></div></>}
             {connectionNotice && <p className="form-error connection-message">{connectionNotice}</p>}
           </div>
         </div> : <div className="game-stage">
           <div className="scribble-mark" aria-hidden="true"><i /><i /><i /><i /></div>
           <h2>Are u Human?</h2>
-          <button className="help-button" type="button" onClick={onHelp} aria-label="How Are u Human? works">?</button>
-          <p className="stage-copy">The strongest LLM model, powered by humans.</p>
+          <button className="help-button" type="button" onClick={onHelp} aria-label={t("helpLabel")}>?</button>
+          <p className="stage-copy">{t("strongestModel")}</p>
         </div>}
         <div className="composer-panel">
-          <div className="composer-tabs" role="group" aria-label="Choose response type"><button className={questionKind === "text" ? "selected" : ""} type="button" onClick={() => { setQuestionKind("text"); focusQuestion(); }}>write something</button><button className={questionKind === "drawing" ? "selected" : ""} type="button" onClick={() => { setQuestionKind("drawing"); focusQuestion(); }}>draw something</button></div>
-          <span className="credit-chip" aria-label={`Authoritative balance: ${pluralisedCredits(player.creditBalance)}`}><span aria-hidden="true">◉ {player.creditBalance}c</span><span className="sr-only">{pluralisedCredits(player.creditBalance)}</span></span>
+          <div className="composer-tabs" role="group" aria-label={t("chooseResponse")}><button className={questionKind === "text" ? "selected" : ""} type="button" onClick={() => { setQuestionKind("text"); focusQuestion(); }}>{t("writeSomething")}</button><button className={questionKind === "drawing" ? "selected" : ""} type="button" onClick={() => { setQuestionKind("drawing"); focusQuestion(); }}>{t("drawSomething")}</button></div>
+          <span className="credit-chip" aria-label={t("balance", { credits: t(player.creditBalance === 1 ? "credit" : "credits", { count: player.creditBalance }) })}><span aria-hidden="true">◉ {player.creditBalance}c</span><span className="sr-only">{t(player.creditBalance === 1 ? "credit" : "credits", { count: player.creditBalance })}</span></span>
           <form className="prompt-bar" onSubmit={submit}>
-            <label className="sr-only" htmlFor="home-question">Your question</label>
-            <input id="home-question" value={question} maxLength={500} placeholder={pendingQuestion ? "answer someone to earn another credit…" : questionKind === "drawing" ? "describe what you want someone to draw…" : "ask anything a human can answer…"} onChange={(event) => setQuestion(event.target.value)} />
-            <button className="send-glyph" type="submit" aria-label="Send question" disabled={isSubmitting || !question.trim() || Boolean(pendingQuestion)}>{isSubmitting ? "…" : "↗"}</button>
+            <label className="sr-only" htmlFor="home-question">{t("yourQuestion")}</label>
+            <input id="home-question" value={question} maxLength={500} placeholder={t(pendingQuestion ? "earnPlaceholder" : questionKind === "drawing" ? "drawPlaceholder" : "askPlaceholder")} onChange={(event) => setQuestion(event.target.value)} />
+            <button className="send-glyph" type="submit" aria-label={t("sendQuestion")} disabled={isSubmitting || !question.trim() || Boolean(pendingQuestion)}>{isSubmitting ? "…" : "↗"}</button>
           </form>
-          <div className="composer-meta"><span>{question.length}/500</span><span>{pendingQuestion ? "one question is already pending" : "sending uses one credit"}</span></div>
+          <div className="composer-meta"><span>{question.length}/500</span><span>{t(pendingQuestion ? "pendingQuestion" : "sendingCredit")}</span></div>
           {questionError && <p className="form-error composer-error" role="alert">{questionError}</p>}
         </div>
       </section>
@@ -575,6 +587,7 @@ function Home({ player, locked, pendingQuestion, deliveredAnswers, connectionNot
 }
 
 function ConsentGate({ error, onAccept, onConduct, onTerms, onPrivacy }: { error: string | null; onAccept: (captchaToken?: string) => void; onConduct: () => void; onTerms: () => void; onPrivacy: () => void }) {
+  const { t } = useLanguage();
   const [ageAccepted, setAgeAccepted] = useState(false);
   const [policyAccepted, setPolicyAccepted] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
@@ -583,18 +596,19 @@ function ConsentGate({ error, onAccept, onConduct, onTerms, onPrivacy }: { error
   const requiresCaptcha = Boolean(turnstileSiteKey && turnstileSiteKey !== "your-turnstile-site-key");
   const markCaptchaUnavailable = useCallback(() => setCaptchaUnavailable(true), []);
   return <div className="modal-backdrop"><section className="entry-modal" role="dialog" aria-modal="true" aria-labelledby="entry-title">
-    <div className="modal-icon" aria-hidden="true">✦</div><h2 id="entry-title">before you enter</h2><p>everyone is welcome to use Are u Human?</p>
-    <label className="consent-row"><input type="checkbox" checked={ageAccepted} onChange={(event) => setAgeAccepted(event.target.checked)} /><span>i agree to follow the <button type="button" onClick={(event) => { event.preventDefault(); event.stopPropagation(); onConduct(); }}>code of conduct</button></span></label>
-    <label className="consent-row"><input type="checkbox" checked={policyAccepted} onChange={(event) => setPolicyAccepted(event.target.checked)} /><span>i agree to the <button type="button" onClick={(event) => { event.preventDefault(); event.stopPropagation(); onTerms(); }}>terms</button> and <button type="button" onClick={(event) => { event.preventDefault(); event.stopPropagation(); onPrivacy(); }}>privacy policy</button></span></label>
+    <div className="modal-icon" aria-hidden="true">✦</div><h2 id="entry-title">{t("beforeEnter")}</h2><p>{t("everyoneWelcome")}</p>
+    <label className="consent-row"><input type="checkbox" checked={ageAccepted} onChange={(event) => setAgeAccepted(event.target.checked)} /><span>{t("agreeConductPrefix")} <button type="button" onClick={(event) => { event.preventDefault(); event.stopPropagation(); onConduct(); }}>{t("codeOfConduct")}</button></span></label>
+    <label className="consent-row"><input type="checkbox" checked={policyAccepted} onChange={(event) => setPolicyAccepted(event.target.checked)} /><span>{t("agreePolicyPrefix")} <button type="button" onClick={(event) => { event.preventDefault(); event.stopPropagation(); onTerms(); }}>{t("terms")}</button> {t("and")} <button type="button" onClick={(event) => { event.preventDefault(); event.stopPropagation(); onPrivacy(); }}>{t("privacyPolicy")}</button></span></label>
     {requiresCaptcha && <TurnstileChallenge siteKey={turnstileSiteKey!} onToken={setCaptchaToken} onUnavailable={markCaptchaUnavailable} />}
-    {captchaUnavailable && <p className="form-error" role="alert">The anti-abuse check could not load. Please disable blockers and try again.</p>}
+    {captchaUnavailable && <p className="form-error" role="alert">{t("captchaError")}</p>}
     {error && <p className="form-error" role="alert">{error}</p>}
-    <button className="modal-primary" type="button" disabled={!ageAccepted || !policyAccepted || (requiresCaptcha && !captchaToken)} onClick={() => onAccept(captchaToken ?? undefined)}>enter anonymously</button>
-    <small>no email, username, password, or profile required.</small>
+    <button className="modal-primary" type="button" disabled={!ageAccepted || !policyAccepted || (requiresCaptcha && !captchaToken)} onClick={() => onAccept(captchaToken ?? undefined)}>{t("enterAnonymous")}</button>
+    <small>{t("noAccount")}</small>
   </section></div>;
 }
 
 function TurnstileChallenge({ siteKey, onToken, onUnavailable }: { siteKey: string; onToken: (token: string | null) => void; onUnavailable: () => void }) {
+  const { t } = useLanguage();
   const container = useRef<HTMLDivElement>(null);
   const widgetId = useRef<string | null>(null);
 
@@ -631,38 +645,42 @@ function TurnstileChallenge({ siteKey, onToken, onUnavailable }: { siteKey: stri
     };
   }, [onToken, onUnavailable, siteKey]);
 
-  return <div className="turnstile-challenge" ref={container} aria-label="Anti-abuse check" />;
+  return <div className="turnstile-challenge" ref={container} aria-label={t("antiAbuse")} />;
 }
 
 function InstructionsModal({ onDone }: { onDone: () => void }) {
+  const { t } = useLanguage();
   return <div className="modal-backdrop"><section className="instruction-modal" role="dialog" aria-modal="true" aria-labelledby="instruction-title">
-    <p className="eyebrow">how it works</p><h2 id="instruction-title">your ai slop bores me</h2>
-    <p>In a world looming with the threat of AI stealing your job, save humanity by stealing AI's job.</p>
-    <ul><li>each text or drawing prompt costs 1 credit.</li><li>to earn credits, switch to the AI tab and answer someone else's prompt with text or a drawing.</li><li>skip prompts you can't answer.</li><li>you can have one question waiting at a time.</li><li>be nice. No hate speech, personal information, links, or meetups.</li><li>report harmful questions or answers.</li></ul>
-    <button className="modal-primary" type="button" onClick={onDone}>got it</button><small>you can reread the rules from the top navigation.</small>
+    <p className="eyebrow">{t("howItWorks")}</p><h2 id="instruction-title">{t("instructionTitle")}</h2>
+    <p>{t("instructionIntro")}</p>
+    <ul><li>{t("ruleCost")}</li><li>{t("ruleEarn")}</li><li>{t("ruleSkip")}</li><li>{t("ruleOne")}</li><li>{t("ruleNice")}</li><li>{t("ruleReport")}</li></ul>
+    <button className="modal-primary" type="button" onClick={onDone}>{t("gotIt")}</button><small>{t("rereadRules")}</small>
   </section></div>;
 }
 
 function SiteNavigation({ onConduct, onActivity, onTerms, onPrivacy }: { onConduct: () => void; onActivity: () => void; onTerms: () => void; onPrivacy: () => void }) {
-  return <nav className="site-nav" aria-label="Site links">
+  const { t } = useLanguage();
+  return <nav className="site-nav" aria-label={t("siteLinks")}>
     <span className="nav-brand">Are u Human?</span>
-    <button type="button" onClick={onConduct}>conduct</button>
-    <button type="button" onClick={onActivity}>activity</button>
-    <button type="button" onClick={onTerms}>terms</button>
-    <button type="button" onClick={onPrivacy}>privacy</button>
+    <button type="button" onClick={onConduct}>{t("conduct")}</button>
+    <button type="button" onClick={onActivity}>{t("activity")}</button>
+    <button type="button" onClick={onTerms}>{t("terms")}</button>
+    <button type="button" onClick={onPrivacy}>{t("privacy")}</button>
   </nav>;
 }
 
 function InformationPage({ player, page, onBack, onActivity, onConduct, onTerms, onPrivacy }: { player: Player; page: InfoPage; onBack: () => void; onActivity: () => void; onConduct: () => void; onTerms: () => void; onPrivacy: () => void }) {
+  const { t } = useLanguage();
   const content = page === "conduct"
-    ? <><p className="eyebrow">Code of conduct</p><h1 id="info-title">Keep the humans safe.</h1><p className="lede">Ask for help, stories, opinions, or drawings — never personal data or real-world contact.</p><h2>Do not post</h2><p>Personal or contact details, links, meetups, harassment, threats, doxxing, self-harm encouragement, hate speech, sexual content involving minors, or illegal content.</p><h2>Use reports</h2><p>Report an assigned question or saved answer that breaks these rules. Repeated misuse may restrict access.</p></>
+    ? <><p className="eyebrow">{t("conductEyebrow")}</p><h1 id="info-title">{t("conductTitle")}</h1><p className="lede">{t("conductLead")}</p><h2>{t("doNotPost")}</h2><p>{t("doNotPostBody")}</p><h2>{t("useReports")}</h2><p>{t("useReportsBody")}</p></>
     : page === "terms"
-      ? <><p className="eyebrow">Terms of use</p><h1 id="info-title">Entertainment, not expert advice.</h1><p className="lede">Every answer is written by a real person, not AI. Do not rely on Are u Human? for medical, legal, financial, safety, or other important decisions.</p><h2>Who can use it</h2><p>Are u Human? is open to everyone, anywhere. By using it, you agree to follow the code of conduct.</p><h2>Credits and availability</h2><p>Each question costs one credit and an accepted answer earns one credit. Matching is not guaranteed, and the service may change or be unavailable while in public beta.</p></>
-      : <><p className="eyebrow">Privacy</p><h1 id="info-title">Anonymous by design.</h1><p className="lede">No email, username, password, or public profile is required to use Are u Human?</p><h2>What is retained</h2><p>Activity stays only in this browser until you delete it. Questions are readable on the server for up to one hour; undelivered answers up to seven days. Delivered content is removed after your browser saves it. Report evidence is retained for 30 days, then purged. Operational metadata and provider backups may remain longer.</p><h2>Your choices</h2><p>You can delete local activity at any time. Do not enter personal information in a question, answer, or drawing.</p></>;
-  return <main className="home-shell"><SiteNavigation onConduct={onConduct} onActivity={onActivity} onTerms={onTerms} onPrivacy={onPrivacy} /><section className="home-card" aria-labelledby="info-title">{content}<button className="secondary-action" type="button" onClick={onBack}>Back home</button><span className="credit-balance">{pluralisedCredits(player.creditBalance)}</span></section></main>;
+      ? <><p className="eyebrow">{t("termsEyebrow")}</p><h1 id="info-title">{t("termsTitle")}</h1><p className="lede">{t("termsLead")}</p><h2>{t("whoCanUse")}</h2><p>{t("whoCanUseBody")}</p><h2>{t("creditsAvailability")}</h2><p>{t("creditsAvailabilityBody")}</p></>
+      : <><p className="eyebrow">{t("privacyEyebrow")}</p><h1 id="info-title">{t("privacyTitle")}</h1><p className="lede">{t("privacyLead")}</p><h2>{t("retained")}</h2><p>{t("retainedBody")}</p><h2>{t("choices")}</h2><p>{t("choicesBody")}</p></>;
+  return <main className="home-shell"><SiteNavigation onConduct={onConduct} onActivity={onActivity} onTerms={onTerms} onPrivacy={onPrivacy} /><section className="home-card" aria-labelledby="info-title">{content}<button className="secondary-action" type="button" onClick={onBack}>{t("backHome")}</button><span className="credit-balance">{t(player.creditBalance === 1 ? "credit" : "credits", { count: player.creditBalance })}</span></section></main>;
 }
 
 function Activity({ player, onBack, onConduct, onTerms, onPrivacy }: { player: Player; onBack: () => void; onConduct: () => void; onTerms: () => void; onPrivacy: () => void }) {
+  const { t } = useLanguage();
   const [entries, setEntries] = useState<WaitingHistoryEntry[]>([]);
   const [confirming, setConfirming] = useState(false);
 
@@ -671,22 +689,23 @@ function Activity({ player, onBack, onConduct, onTerms, onPrivacy }: { player: P
   async function clearEntries() { await history.clear(); setEntries([]); setConfirming(false); }
 
   return <main className="home-shell"><SiteNavigation onConduct={onConduct} onActivity={() => undefined} onTerms={onTerms} onPrivacy={onPrivacy} /><section className="home-card" aria-labelledby="activity-title">
-    <p className="eyebrow">Activity</p><h1 id="activity-title">Saved on this browser.</h1>
-    <p className="notice">History is saved only on this browser. Clearing browser data permanently removes it and cannot be recovered on another device.</p>
-    {entries.length === 0 ? <p className="lede">No local activity yet.</p> : <ul className="activity-list">{entries.map((entry) => <li key={entry.id}><strong>{entry.role === "asker" ? "You asked" : "You answered"}{entry.answerKind === "drawing" ? " with a drawing" : ""}</strong><p>{entry.questionText}</p>{entry.answerText && <p>{entry.answerText}</p>}{entry.drawing && <DrawingPreview drawing={entry.drawing} label={`Drawing for ${entry.questionText}`} />}<button className="secondary-action" type="button" onClick={() => void deleteEntry(entry.id!)}>Delete</button></li>)}</ul>}
-    <div className="form-actions"><button className="secondary-action" type="button" onClick={onBack}>Back home</button>{entries.length > 0 && <button className="secondary-action" type="button" onClick={() => setConfirming(true)}>Clear all history</button>}</div>
-    {confirming && <div className="confirm-panel" role="alert"><p>Delete all local history? This cannot be undone.</p><button className="primary-action" type="button" onClick={() => void clearEntries()}>Delete all</button><button className="secondary-action" type="button" onClick={() => setConfirming(false)}>Cancel</button></div>}
-    <span className="credit-balance">{pluralisedCredits(player.creditBalance)}</span>
+    <p className="eyebrow">{t("activity")}</p><h1 id="activity-title">{t("activityTitle")}</h1>
+    <p className="notice">{t("activityNotice")}</p>
+    {entries.length === 0 ? <p className="lede">{t("noActivity")}</p> : <ul className="activity-list">{entries.map((entry) => <li key={entry.id}><strong>{t(entry.role === "asker" ? "youAsked" : "youAnswered")}{entry.answerKind === "drawing" ? t("withDrawing") : ""}</strong><p>{entry.questionText}</p>{entry.answerText && <p>{entry.answerText}</p>}{entry.drawing && <DrawingPreview drawing={entry.drawing} label={t("drawingFor", { question: entry.questionText })} />}<button className="secondary-action" type="button" onClick={() => void deleteEntry(entry.id!)}>{t("delete")}</button></li>)}</ul>}
+    <div className="form-actions"><button className="secondary-action" type="button" onClick={onBack}>{t("backHome")}</button>{entries.length > 0 && <button className="secondary-action" type="button" onClick={() => setConfirming(true)}>{t("clearHistory")}</button>}</div>
+    {confirming && <div className="confirm-panel" role="alert"><p>{t("deleteHistoryConfirm")}</p><button className="primary-action" type="button" onClick={() => void clearEntries()}>{t("deleteAll")}</button><button className="secondary-action" type="button" onClick={() => setConfirming(false)}>{t("cancel")}</button></div>}
+    <span className="credit-balance">{t(player.creditBalance === 1 ? "credit" : "credits", { count: player.creditBalance })}</span>
   </section></main>;
 }
 
 function MachineFrame({ player, onHuman, onActivity, onConduct, onTerms, onPrivacy, children }: { player: Player; onHuman: () => void; onActivity: () => void; onConduct: () => void; onTerms: () => void; onPrivacy: () => void; children: ReactNode }) {
+  const { t } = useLanguage();
   return <main className="app-page">
-    <nav className="site-nav" aria-label="Site links"><span className="nav-brand">Are u Human?</span><button type="button" onClick={onConduct}>conduct</button><button type="button" onClick={onActivity}>activity</button><button type="button" onClick={onTerms}>terms</button><button type="button" onClick={onPrivacy}>privacy</button></nav>
+    <nav className="site-nav" aria-label={t("siteLinks")}><span className="nav-brand">Are u Human?</span><button type="button" onClick={onConduct}>{t("conduct")}</button><button type="button" onClick={onActivity}>{t("activity")}</button><button type="button" onClick={onTerms}>{t("terms")}</button><button type="button" onClick={onPrivacy}>{t("privacy")}</button></nav>
     <section className="game-shell machine-shell">
-      <div className="mode-tabs" role="group" aria-label="Choose a role"><button className="mode-tab" type="button" onClick={onHuman}>ask a human</button><button className="mode-tab machine-active" type="button">play as ai</button></div>
-      <div className="community-banner"><strong>humans only</strong><span>be kind. no personal info, links, or meetups.</span></div>
-      <span className="machine-credit" aria-label={`Authoritative balance: ${pluralisedCredits(player.creditBalance)}`}>{player.creditBalance}c</span>
+      <div className="mode-tabs" role="group" aria-label={t("chooseRole")}><button className="mode-tab" type="button" onClick={onHuman}>{t("askHuman")}</button><button className="mode-tab machine-active" type="button">{t("playAi")}</button></div>
+      <div className="community-banner"><strong>{t("humansOnly")}</strong><span>{t("communityRule")}</span></div>
+      <span className="machine-credit" aria-label={t("balance", { credits: t(player.creditBalance === 1 ? "credit" : "credits", { count: player.creditBalance }) })}>{player.creditBalance}c</span>
       <div className="machine-content">{children}</div>
     </section>
     <OnlinePresence mode="ai" />
@@ -694,14 +713,16 @@ function MachineFrame({ player, onHuman, onActivity, onConduct, onTerms, onPriva
 }
 
 function MachineReady({ player, onStart, onHuman, onActivity, onConduct, onTerms, onPrivacy }: { player: Player; onStart: () => void; onHuman: () => void; onActivity: () => void; onConduct: () => void; onTerms: () => void; onPrivacy: () => void }) {
+  const { t } = useLanguage();
   return <MachineFrame player={player} onHuman={onHuman} onActivity={onActivity} onConduct={onConduct} onTerms={onTerms} onPrivacy={onPrivacy}><section className="queue-workspace" aria-labelledby="machine-ready-title">
-    <div className="queue-card ready-card"><h1 id="machine-ready-title">become the machine</h1><p>You have two minutes to answer a stranger before the reservation expires.</p><small>+1 credit per answer</small></div>
-    <button className="machine-action accent" type="button" onClick={onStart}>start playing</button>
-    <button className="machine-action" type="button" onClick={onActivity}>view activity</button>
+    <div className="queue-card ready-card"><h1 id="machine-ready-title">{t("becomeMachine")}</h1><p>{t("machineReady")}</p><small>{t("earnCredit")}</small></div>
+    <button className="machine-action accent" type="button" onClick={onStart}>{t("startPlaying")}</button>
+    <button className="machine-action" type="button" onClick={onActivity}>{t("viewActivity")}</button>
   </section></MachineFrame>;
 }
 
 function AnswerQuestion({ player, assignment, onSkip, onReport, onSubmissionStart, onSubmissionFailure, onNext, onLeave, onActivity, onConduct, onTerms, onPrivacy, connectionNotice }: { player: Player; assignment: AssignedQuestion; onSkip: () => Promise<void>; onReport: (reason: string) => Promise<void>; onSubmissionStart: () => void; onSubmissionFailure: () => void; onNext: (player: Player) => void; onLeave: (player: Player) => void; onActivity: (player: Player) => void; onConduct: (player: Player) => void; onTerms: (player: Player) => void; onPrivacy: (player: Player) => void; connectionNotice: string | null }) {
+  const { t } = useLanguage();
   const [answer, setAnswer] = useState("");
   const [drawing, setDrawing] = useState<DrawingData>(() => emptyDrawing());
   const [balance, setBalance] = useState(player.creditBalance);
@@ -730,7 +751,7 @@ function AnswerQuestion({ player, assignment, onSkip, onReport, onSubmissionStar
         });
         setMessage(null);
       } catch {
-        setMessage("Credit earned, but this answer could not be saved to this browser.");
+        setMessage(t("answerSavedWarning"));
       }
     } catch (submitError: unknown) {
       setMessage(messageFor(submitError));
@@ -742,32 +763,33 @@ function AnswerQuestion({ player, assignment, onSkip, onReport, onSubmissionStar
 
   const currentPlayer = { ...player, creditBalance: submittedBalance ?? balance };
   if (submittedBalance !== null) return <MachineFrame player={currentPlayer} onHuman={() => onLeave(currentPlayer)} onActivity={() => onActivity(currentPlayer)} onConduct={() => onConduct(currentPlayer)} onTerms={() => onTerms(currentPlayer)} onPrivacy={() => onPrivacy(currentPlayer)}><section className="machine-success" aria-labelledby="answer-success-title">
-    <h1 className="sr-only" id="answer-success-title">Answer submitted successfully</h1>
-    <p className="success-banner" role="status">great success (+1 credit. you now have {submittedBalance})</p>
+    <h1 className="sr-only" id="answer-success-title">{t("submittedTitle")}</h1>
+    <p className="success-banner" role="status">{t("success", { count: submittedBalance })}</p>
     {message && <p className="form-error">{message}</p>}
-    <button className="machine-action accent" type="button" onClick={() => onNext(currentPlayer)}>another one</button>
-    <button className="machine-action" type="button" onClick={() => onLeave(currentPlayer)}>no thanks</button>
-    <button className="machine-action" type="button" onClick={() => onActivity(currentPlayer)}>view activity</button>
+    <button className="machine-action accent" type="button" onClick={() => onNext(currentPlayer)}>{t("anotherOne")}</button>
+    <button className="machine-action" type="button" onClick={() => onLeave(currentPlayer)}>{t("noThanks")}</button>
+    <button className="machine-action" type="button" onClick={() => onActivity(currentPlayer)}>{t("viewActivity")}</button>
   </section></MachineFrame>;
 
   return <MachineFrame player={currentPlayer} onHuman={() => onLeave(currentPlayer)} onActivity={() => onActivity(currentPlayer)} onConduct={() => onConduct(currentPlayer)} onTerms={() => onTerms(currentPlayer)} onPrivacy={() => onPrivacy(currentPlayer)}><section className="answer-workspace" aria-labelledby="answer-title">
-    <h1 className="sr-only" id="answer-title">Answer this question</h1>
+    <h1 className="sr-only" id="answer-title">{t("answerQuestion")}</h1>
     {connectionNotice && <p className="form-error" role="status">{connectionNotice}</p>}
     <ReservationTimer expiresAt={assignment.reservationExpiresAt} serverNow={assignment.serverNow} />
-    <article className="assignment-card"><div><strong>FROM A HUMAN (+1C)</strong><small>asked for {assignment.kind === "drawing" ? "a drawing" : "text"}</small></div><p>“{assignment.text}”</p></article>
-    <p className="skip-tip"><strong>skip prompts you can’t answer!</strong><span>Skip quickly to receive another available prompt.</span></p>
-    <div className="answer-tabs"><span className={assignment.kind !== "drawing" ? "selected" : ""}>write</span><span className={assignment.kind === "drawing" ? "selected" : ""}>draw</span></div>
+    <article className="assignment-card"><div><strong>{t("fromHuman")}</strong><small>{t("askedFor", { kind: t(assignment.kind === "drawing" ? "drawing" : "text") })}</small></div><p>“{assignment.text}”</p></article>
+    <p className="skip-tip"><strong>{t("skipTitle")}</strong><span>{t("skipBody")}</span></p>
+    <div className="answer-tabs"><span className={assignment.kind !== "drawing" ? "selected" : ""}>{t("write")}</span><span className={assignment.kind === "drawing" ? "selected" : ""}>{t("draw")}</span></div>
     <form onSubmit={submit}>
-      {assignment.kind === "drawing" ? <DrawingCanvas value={drawing} onChange={setDrawing} /> : <><label className="sr-only" htmlFor="answer">Your answer</label><textarea id="answer" placeholder="type your answer here…" value={answer} maxLength={750} required onChange={(event) => setAnswer(event.target.value)} /><p className="fine-print">{answer.length}/750 characters</p></>}
+      {assignment.kind === "drawing" ? <DrawingCanvas value={drawing} onChange={setDrawing} /> : <><label className="sr-only" htmlFor="answer">{t("yourAnswer")}</label><textarea id="answer" placeholder={t("answerPlaceholder")} value={answer} maxLength={750} required onChange={(event) => setAnswer(event.target.value)} /><p className="fine-print">{t("characters", { count: answer.length })}</p></>}
       {message && <p className="form-error" role="status">{message}</p>}
-      <div className="answer-actions"><button className="primary-action answer-submit" type="submit" disabled={submitting || (assignment.kind === "drawing" ? drawing.strokes.length === 0 : !answer.trim())}>{submitting ? "Submitting…" : assignment.kind === "drawing" ? "Send drawing" : "Submit"}</button>
-      <button className="secondary-action" type="button" disabled={skipping || submitting} onClick={async () => { setSkipping(true); try { await onSkip(); } catch (error: unknown) { setMessage(messageFor(error)); setSkipping(false); } }}>Skip</button>
-      <details className="report-menu"><summary>Report</summary><label className="question-label" htmlFor="question-report-reason">Reason</label><textarea id="question-report-reason" value={reportReason} maxLength={500} onChange={(event) => setReportReason(event.target.value)} /><button className="secondary-action" type="button" disabled={reporting || !reportReason.trim()} onClick={async () => { setReporting(true); try { await onReport(reportReason.trim()); } catch (error: unknown) { setMessage(messageFor(error)); setReporting(false); } }}> {reporting ? "Reporting…" : "Report and release"}</button></details></div>
+      <div className="answer-actions"><button className="primary-action answer-submit" type="submit" disabled={submitting || (assignment.kind === "drawing" ? drawing.strokes.length === 0 : !answer.trim())}>{submitting ? t("submitting") : assignment.kind === "drawing" ? t("sendDrawing") : t("submit")}</button>
+      <button className="secondary-action" type="button" disabled={skipping || submitting} onClick={async () => { setSkipping(true); try { await onSkip(); } catch (error: unknown) { setMessage(messageFor(error)); setSkipping(false); } }}>{t("skip")}</button>
+      <details className="report-menu"><summary>{t("report")}</summary><label className="question-label" htmlFor="question-report-reason">{t("reason")}</label><textarea id="question-report-reason" value={reportReason} maxLength={500} onChange={(event) => setReportReason(event.target.value)} /><button className="secondary-action" type="button" disabled={reporting || !reportReason.trim()} onClick={async () => { setReporting(true); try { await onReport(reportReason.trim()); } catch (error: unknown) { setMessage(messageFor(error)); setReporting(false); } }}> {t(reporting ? "reporting" : "reportRelease")}</button></details></div>
     </form>
   </section></MachineFrame>;
 }
 
 function ReservationTimer({ expiresAt, serverNow }: { expiresAt: string; serverNow: string }) {
+  const { t } = useLanguage();
   const [elapsed, setElapsed] = useState(0);
   const remaining = Math.max(0, Date.parse(expiresAt) - Date.parse(serverNow) - elapsed);
   const seconds = Math.ceil(remaining / 1000);
@@ -779,10 +801,10 @@ function ReservationTimer({ expiresAt, serverNow }: { expiresAt: string; serverN
   }, []);
 
   const percent = Math.min(100, (remaining / 120000) * 100);
-  return <div className="reservation-timer" role="timer" aria-live="off"><div><span>time left</span><strong>{seconds}s</strong></div><div className="timer-track"><i style={{ width: `${percent}%` }} /></div><span className="sr-only">Time remaining: {Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, "0")}</span></div>;
+  return <div className="reservation-timer" role="timer" aria-live="off"><div><span>{t("timeLeft")}</span><strong>{seconds}s</strong></div><div className="timer-track"><i style={{ width: `${percent}%` }} /></div><span className="sr-only">{t("timeRemaining", { time: `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}` })}</span></div>;
 }
 
-function EmptyQueue({
+export function EmptyQueue({
   player,
   error,
   onCheckAgain,
@@ -803,32 +825,30 @@ function EmptyQueue({
   onTerms: () => void;
   onPrivacy: () => void;
 }) {
-  useEffect(() => {
-    const timer = window.setInterval(onCheckAgain, 5000);
-    return () => window.clearInterval(timer);
-  }, []);
-
+  const { t } = useLanguage();
   return <MachineFrame player={player} onHuman={onHuman} onActivity={onActivity} onConduct={onConduct} onTerms={onTerms} onPrivacy={onPrivacy}><section className="queue-workspace" aria-labelledby="empty-title">
-    <div className="queue-card"><h1 id="empty-title">become the machine</h1><p>Answer a stranger before the reservation expires.</p><small>+1 credit per answer</small><strong><span aria-hidden="true">◔</span> waiting for a prompt…</strong></div>
+    <div className="queue-card"><h1 id="empty-title">{t("becomeMachine")}</h1><p>{t("machineReadyShort")}</p><small>{t("earnCredit")}</small><strong><span aria-hidden="true">◔</span> {t("waitingPrompt")}</strong></div>
     {error && <p className="form-error" role="alert">{error}</p>}
-    <button className="machine-action" type="button" onClick={onCheckAgain}>check now</button><button className="machine-action" type="button" onClick={onLeaveQueue}>leave queue</button><button className="machine-action" type="button" onClick={onActivity}>view activity</button>
+    <button className="machine-action" type="button" onClick={onCheckAgain}>{t("checkNow")}</button><button className="machine-action" type="button" onClick={onLeaveQueue}>{t("leaveQueue")}</button><button className="machine-action" type="button" onClick={onActivity}>{t("viewActivity")}</button>
   </section></MachineFrame>;
 }
 
 function DeliveredChat({ delivery }: { delivery: PendingDelivery }) {
+  const { t } = useLanguage();
   const [rating, setRating] = useState<"like" | "dislike" | null>(null);
   const [ratingError, setRatingError] = useState<string | null>(null);
   const [reportReason, setReportReason] = useState("");
   const [reportMessage, setReportMessage] = useState<string | null>(null);
   return <article className="assistant-message" aria-labelledby="delivery-title">
-    <h2 className="sr-only" id="delivery-title">A human answered your question</h2>
-    <small>a human responded{delivery.answerKind === "drawing" ? " with a drawing" : ""}</small>{delivery.drawing ? <DrawingPreview drawing={delivery.drawing} label={`Drawing response to ${delivery.questionText}`} /> : <p>{delivery.answerText}</p>}
-    <div className="message-actions"><button type="button" aria-label="Like" disabled={rating !== null} onClick={async () => { try { await gameApi.rateAnswer(delivery.answerId, "like"); setRating("like"); } catch (error: unknown) { setRatingError(messageFor(error)); } }}>👍</button><button type="button" aria-label="Dislike" disabled={rating !== null} onClick={async () => { try { await gameApi.rateAnswer(delivery.answerId, "dislike"); setRating("dislike"); } catch (error: unknown) { setRatingError(messageFor(error)); } }}>👎</button><details className="chat-report"><summary>report</summary><label className="sr-only" htmlFor="answer-report-reason">Reason</label><textarea id="answer-report-reason" placeholder="Why are you reporting this answer?" value={reportReason} maxLength={500} onChange={(event) => setReportReason(event.target.value)} /><button type="button" disabled={!reportReason.trim()} onClick={async () => { try { await gameApi.reportAnswer(delivery.answerId, reportReason.trim(), delivery.drawing ? "Drawing response" : delivery.answerText ?? "Answer unavailable"); setReportMessage("Report received."); } catch (error: unknown) { setReportMessage(messageFor(error)); } }}>send report</button></details></div>
-    {rating && <p className="chat-feedback" role="status">Thanks for your feedback.</p>}{ratingError && <p className="form-error" role="alert">{ratingError}</p>}{reportMessage && <p className="chat-feedback" role="status">{reportMessage}</p>}
+    <h2 className="sr-only" id="delivery-title">{t("humanAnswered")}</h2>
+    <small>{t(delivery.answerKind === "drawing" ? "humanRespondedDrawing" : "humanResponded")}</small>{delivery.drawing ? <DrawingPreview drawing={delivery.drawing} label={t("drawingResponse", { question: delivery.questionText })} /> : <p>{delivery.answerText}</p>}
+    <div className="message-actions"><button type="button" aria-label={t("like")} disabled={rating !== null} onClick={async () => { try { await gameApi.rateAnswer(delivery.answerId, "like"); setRating("like"); } catch (error: unknown) { setRatingError(messageFor(error)); } }}>👍</button><button type="button" aria-label={t("dislike")} disabled={rating !== null} onClick={async () => { try { await gameApi.rateAnswer(delivery.answerId, "dislike"); setRating("dislike"); } catch (error: unknown) { setRatingError(messageFor(error)); } }}>👎</button><details className="chat-report"><summary>{t("report")}</summary><label className="sr-only" htmlFor="answer-report-reason">{t("reason")}</label><textarea id="answer-report-reason" placeholder={t("reportPlaceholder")} value={reportReason} maxLength={500} onChange={(event) => setReportReason(event.target.value)} /><button type="button" disabled={!reportReason.trim()} onClick={async () => { try { await gameApi.reportAnswer(delivery.answerId, reportReason.trim()); setReportMessage(t("reportReceived")); } catch (error: unknown) { setReportMessage(messageFor(error)); } }}>{t("sendReport")}</button></details></div>
+    {rating && <p className="chat-feedback" role="status">{t("thanksFeedback")}</p>}{ratingError && <p className="form-error" role="alert">{ratingError}</p>}{reportMessage && <p className="chat-feedback" role="status">{reportMessage}</p>}
   </article>;
 }
 
 function ModerationConsole({ player, onBack }: { player: Player; onBack: () => void }) {
+  const { t } = useLanguage();
   const [reports, setReports] = useState<ModerationReport[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [working, setWorking] = useState<string | null>(null);
@@ -839,34 +859,37 @@ function ModerationConsole({ player, onBack }: { player: Player; onBack: () => v
     catch (resolveError: unknown) { setError(messageFor(resolveError)); }
     finally { setWorking(null); }
   }
-  return <main className="home-shell"><section className="home-card" aria-labelledby="moderation-title"><p className="eyebrow">Protected moderation</p><h1 id="moderation-title">Open reports</h1><p className="notice">Moderation evidence is limited to the reported content and reason.</p>{error && <p className="form-error" role="alert">{error}</p>}{reports.length === 0 ? <p className="lede">No open reports.</p> : <ul className="activity-list">{reports.map((report) => <li key={report.id}><strong>{report.contentType} report</strong><p>Reason: {report.reason}</p><p>Evidence: {report.evidenceSnapshot}</p><div className="form-actions"><button className="secondary-action" disabled={working === report.id} onClick={() => void resolve(report, "dismiss")}>Dismiss</button><button className="secondary-action" disabled={working === report.id} onClick={() => void resolve(report, "remove_content", true)}>Remove & refund</button><button className="primary-action" disabled={working === report.id} onClick={() => void resolve(report, "remove_and_restrict", true)}>Remove & restrict</button></div></li>)}</ul>}<button className="secondary-action" type="button" onClick={onBack}>Back home</button><span className="credit-balance">{pluralisedCredits(player.creditBalance)}</span></section></main>;
+  return <main className="home-shell"><section className="home-card" aria-labelledby="moderation-title"><p className="eyebrow">{t("moderationEyebrow")}</p><h1 id="moderation-title">{t("openReports")}</h1><p className="notice">{t("moderationNotice")}</p>{error && <p className="form-error" role="alert">{error}</p>}{reports.length === 0 ? <p className="lede">{t("noReports")}</p> : <ul className="activity-list">{reports.map((report) => <li key={report.id}><strong>{t("reportType", { type: report.contentType })}</strong><p>{t("reasonValue", { value: report.reason })}</p><p>{t("evidence", { value: report.evidenceSnapshot })}</p><div className="form-actions"><button className="secondary-action" disabled={working === report.id} onClick={() => void resolve(report, "dismiss")}>{t("dismiss")}</button><button className="secondary-action" disabled={working === report.id} onClick={() => void resolve(report, "remove_content", true)}>{t("removeRefund")}</button><button className="primary-action" disabled={working === report.id} onClick={() => void resolve(report, "remove_and_restrict", true)}>{t("removeRestrict")}</button></div></li>)}</ul>}<button className="secondary-action" type="button" onClick={onBack}>{t("backHome")}</button><span className="credit-balance">{t(player.creditBalance === 1 ? "credit" : "credits", { count: player.creditBalance })}</span></section></main>;
 }
 
 function DeliveryRetry({ player, error, onRetry }: { player: Player; error: string; onRetry: () => void }) {
+  const { t } = useLanguage();
   return <main className="home-shell"><section className="home-card" aria-labelledby="delivery-retry-title">
-    <p className="eyebrow">Answer ready</p><h1 id="delivery-retry-title">Save this answer before we remove it from the server.</h1>
+    <p className="eyebrow">{t("answerReady")}</p><h1 id="delivery-retry-title">{t("saveAnswer")}</h1>
     <p className="form-error" role="alert">{error}</p>
-    <button className="primary-action" type="button" onClick={onRetry}>Retry saving answer</button>
-    <span className="credit-balance">{pluralisedCredits(player.creditBalance)}</span>
+    <button className="primary-action" type="button" onClick={onRetry}>{t("retrySave")}</button>
+    <span className="credit-balance">{t(player.creditBalance === 1 ? "credit" : "credits", { count: player.creditBalance })}</span>
   </section></main>;
 }
 
 function ExpiredQuestion({ player, onContinue }: { player: Player; onContinue: () => void }) {
+  const { t } = useLanguage();
   return <main className="home-shell"><section className="home-card" aria-labelledby="expired-title">
-    <p className="eyebrow">Question expired</p>
-    <h1 id="expired-title">Your unanswered question expired.</h1>
-    <p className="lede">Your credit has been refunded and the temporary question content was removed.</p>
-    <button className="primary-action" type="button" onClick={onContinue}>Continue</button>
-    <span className="credit-balance">{pluralisedCredits(player.creditBalance)}</span>
+    <p className="eyebrow">{t("questionExpired")}</p>
+    <h1 id="expired-title">{t("questionExpiredTitle")}</h1>
+    <p className="lede">{t("questionExpiredBody")}</p>
+    <button className="primary-action" type="button" onClick={onContinue}>{t("continue")}</button>
+    <span className="credit-balance">{t(player.creditBalance === 1 ? "credit" : "credits", { count: player.creditBalance })}</span>
   </section></main>;
 }
 
 function UnavailableDelivery({ player, onContinue }: { player: Player; onContinue: () => void }) {
+  const { t } = useLanguage();
   return <main className="home-shell"><section className="home-card" aria-labelledby="unavailable-title">
-    <p className="eyebrow">Answer unavailable</p><h1 id="unavailable-title">This answer is no longer available.</h1>
-    <p className="lede">It was not saved to this browser before the temporary server copy expired.</p>
-    <button className="primary-action" type="button" onClick={onContinue}>Continue</button>
-    <span className="credit-balance">{pluralisedCredits(player.creditBalance)}</span>
+    <p className="eyebrow">{t("answerUnavailable")}</p><h1 id="unavailable-title">{t("answerUnavailableTitle")}</h1>
+    <p className="lede">{t("answerUnavailableBody")}</p>
+    <button className="primary-action" type="button" onClick={onContinue}>{t("continue")}</button>
+    <span className="credit-balance">{t(player.creditBalance === 1 ? "credit" : "credits", { count: player.creditBalance })}</span>
   </section></main>;
 }
 

@@ -7,8 +7,16 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "typecheck": "tsc -b --pretty false",
+    "lint": "eslint src e2e playwright.config.ts",
+    "format:check": "prettier --check package.json eslint.config.js vite.config.ts playwright.config.ts e2e src/language.tsx src/language.test.tsx .github/workflows/ci.yml",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "db:start": "pnpm dlx supabase start",
+    "db:reset": "pnpm dlx supabase db reset --local",
+    "db:test": "pnpm dlx supabase test db supabase/tests/database --local",
+    "benchmark:matchmaking": "node scripts/benchmark-matchmaking.mjs 20 20",
+    "benchmark:matchmaking:plan": "node scripts/run-matchmaking-plan.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.4",
@@ -18,13 +26,19 @@
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.62.1",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.2.0",
     "@types/react": "^19.0.8",
     "@types/react-dom": "^19.0.3",
     "@vitejs/plugin-react": "^4.4.1",
+    "eslint": "^10.8.1",
+    "globals": "^17.9.0",
     "jsdom": "^26.0.0",
+    "prettier": "^3.9.6",
     "typescript": "~5.7.2",
+    "typescript-eslint": "^8.66.0",
     "vite": "^6.1.0",
     "vitest": "^3.0.7"
   }

@@ -1,6 +1,6 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import App from "./App";
+import App, { EmptyQueue } from "./App";
 import { gameSession } from "./services/gameSession";
 import { gameApi } from "./services/gameApi";
 import { history } from "./services/history";
@@ -8,6 +8,8 @@ import { history } from "./services/history";
 const presence = vi.hoisted(() => {
   const state: Record<string, Array<{ mode?: string }>> = {};
   const getUser = vi.fn().mockResolvedValue({ data: { user: null }, error: null });
+  const getSession = vi.fn().mockResolvedValue({ data: { session: null }, error: null });
+  const setAuth = vi.fn().mockResolvedValue(undefined);
   const onAuthStateChange = vi.fn();
   let authChangeCallback: ((event: string, session: { user: { id: string } } | null) => void) | null = null;
   const channel: {
@@ -37,6 +39,8 @@ const presence = vi.hoisted(() => {
 
   return {
     getUser,
+    getSession,
+    setAuth,
     onAuthStateChange,
     channel,
     signIn(userId: string) {
@@ -64,13 +68,16 @@ const presence = vi.hoisted(() => {
         return { data: { subscription: { unsubscribe: vi.fn() } } };
       });
       getUser.mockResolvedValue({ data: { user: null }, error: null });
+      getSession.mockResolvedValue({ data: { session: null }, error: null });
+      setAuth.mockResolvedValue(undefined);
     }
   };
 });
 
 vi.mock("./services/supabase", () => ({
   getSupabaseClient: () => ({
-    auth: { getUser: presence.getUser, onAuthStateChange: presence.onAuthStateChange },
+    auth: { getUser: presence.getUser, getSession: presence.getSession, onAuthStateChange: presence.onAuthStateChange },
+    realtime: { setAuth: presence.setAuth },
     channel: () => presence.channel,
     removeChannel: vi.fn()
   })
@@ -325,6 +332,59 @@ describe("first-visit session", () => {
     expect(screen.getByLabelText(/your question/i)).toBeInTheDocument();
   });
 
+  it("does not start an automatic interval for an empty queue", () => {
+    const setIntervalSpy = vi.spyOn(window, "setInterval");
+    render(<EmptyQueue
+      player={{ creditBalance: 1, activeQuestion: null }}
+      error={null}
+      onCheckAgain={vi.fn()}
+      onHuman={vi.fn()}
+      onLeaveQueue={vi.fn()}
+      onActivity={vi.fn()}
+      onConduct={vi.fn()}
+      onTerms={vi.fn()}
+      onPrivacy={vi.fn()}
+    />);
+
+    expect(setIntervalSpy).not.toHaveBeenCalled();
+    setIntervalSpy.mockRestore();
+  });
+
+  it("pauses active-question polling while the tab is hidden and resumes on return", async () => {
+    const activeQuestion = { id: "waiting-question", text: "Still there?", status: "pending" as const, createdAt: "2026-08-08T00:00:00Z" };
+    const setIntervalSpy = vi.spyOn(window, "setInterval");
+    Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" });
+    try {
+      vi.mocked(gameSession.restore).mockResolvedValue({ creditBalance: 0, activeQuestion });
+
+      render(<App />);
+      await screen.findByText("Still there?");
+
+      expect(gameApi.retrievePendingDelivery).not.toHaveBeenCalled();
+      expect(gameApi.getLatestExpiredQuestion).not.toHaveBeenCalled();
+      expect(gameApi.getLatestUnavailableDelivery).not.toHaveBeenCalled();
+
+      Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" });
+      act(() => document.dispatchEvent(new Event("visibilitychange")));
+      await waitFor(() => expect(gameApi.retrievePendingDelivery).toHaveBeenCalledOnce());
+    } finally {
+      Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" });
+      setIntervalSpy.mockRestore();
+    }
+  });
+
+  it("uses a one-minute fallback interval for an active question", async () => {
+    const activeQuestion = { id: "waiting-question", text: "Still there?", status: "pending" as const, createdAt: "2026-08-08T00:00:00Z" };
+    const setIntervalSpy = vi.spyOn(window, "setInterval");
+    vi.mocked(gameSession.restore).mockResolvedValue({ creditBalance: 0, activeQuestion });
+
+    render(<App />);
+    await screen.findByText("Still there?");
+
+    await waitFor(() => expect(setIntervalSpy).toHaveBeenCalledWith(expect.any(Function), 60_000));
+    setIntervalSpy.mockRestore();
+  });
+
   it("keeps a player in the AI queue after skipping an assignment", async () => {
     const assignment = {
       id: "question-to-skip",
@@ -566,6 +626,6 @@ describe("first-visit session", () => {
     fireEvent.change(screen.getByLabelText("Reason"), { target: { value: "Harmful answer" } });
     fireEvent.click(screen.getByRole("button", { name: /send report/i }));
 
-    await waitFor(() => expect(gameApi.reportAnswer).toHaveBeenCalledWith("answer-report", "Harmful answer", "Saved answer."));
+    await waitFor(() => expect(gameApi.reportAnswer).toHaveBeenCalledWith("answer-report", "Harmful answer"));
   });
 });

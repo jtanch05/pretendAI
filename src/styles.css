@@ -332,10 +332,37 @@ textarea:focus, .prompt-bar:focus-within { border-color: #000080; outline: 1px d
 .credit-balance { top: 38px; border: 2px outset #fff; background: #c0c0c0; color: #000; }
 
 @media (max-width: 620px) {
-  .app-page { padding: 24px 0 38px; }
+  .app-page { padding: 60px 0 38px; }
   .site-nav { overflow-x: auto; }
   .site-nav::after { display: none; }
   .site-nav button, .site-nav .nav-brand { flex: 0 0 auto; }
   .game-shell { width: 100%; min-width: 100%; max-width: 100%; border-right: 2px outset #fff; border-left: 2px outset #fff; }
   .gate-card, .home-card { border: 2px outset #fff; }
 }
+/* Global language control remains available above consent and instruction modals. */
+.language-switch {
+  position: fixed;
+  z-index: 1000;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  overflow: hidden;
+  border: 1px solid #111;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 2px 2px 0 #111;
+}
+
+.language-switch button {
+  min-height: 32px;
+  padding: 5px 10px;
+  border: 0;
+  background: transparent;
+  color: #111;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.language-switch button + button { border-left: 1px solid #111; }
+.language-switch button.selected { background: #111; color: #fff; }

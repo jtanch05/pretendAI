@@ -161,11 +161,10 @@ export const gameApi = {
     if (error) throw new Error(error.message);
   },
 
-  async reportAnswer(answerId: string, reason: string, answerEvidence: string): Promise<void> {
+  async reportAnswer(answerId: string, reason: string): Promise<void> {
     const { error } = await getSupabaseClient().rpc("report_answer", {
       reported_answer_id: answerId,
-      report_reason: reason,
-      answer_evidence: answerEvidence
+      report_reason: reason
     });
     if (error) throw new Error(error.message);
   },
