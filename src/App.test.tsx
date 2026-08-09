@@ -539,12 +539,16 @@ describe("first-visit session", () => {
       id: "question-next", text: "Second question", status: "pending", createdAt: "2026-08-07T00:01:00Z", creditBalance: 0
     });
 
-    render(<App />);
+    const { container } = render(<App />);
     expect(await screen.findByText("First answer")).toBeInTheDocument();
+    const chatFeed = container.querySelector<HTMLElement>(".chat-feed")!;
+    Object.defineProperty(chatFeed, "scrollHeight", { configurable: true, value: 640 });
+    chatFeed.scrollTop = 0;
     fireEvent.change(screen.getByLabelText("Your question"), { target: { value: "Second question" } });
     fireEvent.click(screen.getByRole("button", { name: /send question/i }));
 
     await waitFor(() => expect(gameApi.createQuestion).toHaveBeenCalledWith("Second question", "text"));
+    await waitFor(() => expect(chatFeed.scrollTop).toBe(640));
     expect(await screen.findByText("Second question")).toBeInTheDocument();
     expect(screen.getByText("First question")).toBeInTheDocument();
     expect(screen.getByText("First answer")).toBeInTheDocument();

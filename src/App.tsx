@@ -1,4 +1,4 @@
-import { Fragment, type FormEvent, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, type FormEvent, type ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import Lottie from "lottie-react";
 import { gameSession, type Player } from "./services/gameSession";
@@ -129,6 +129,33 @@ function OnlinePresence({ mode }: { mode: PresenceMode }) {
 
   const online = counts.human + counts.ai;
   return <p className="online-note" aria-live="polite"><span>{t("online", { online, human: counts.human, ai: counts.ai })}</span><br /><span>{t("humanTagline")}</span></p>;
+}
+
+function DesktopIcons() {
+  const { language } = useLanguage();
+  const labels = language === "zh"
+    ? ["向真人提问", "扮演 AI", "活动记录", "回收站"]
+    : ["Ask a Human", "Pretend AI", "My Activity", "Recycle Bin"];
+  return <aside className="desktop-icons" aria-hidden="true">
+    <span><i className="desktop-icon computer" />{labels[0]}</span>
+    <span><i className="desktop-icon robot" />{labels[1]}</span>
+    <span><i className="desktop-icon document" />{labels[2]}</span>
+    <span><i className="desktop-icon bin" />{labels[3]}</span>
+  </aside>;
+}
+
+function WindowChrome() {
+  const { language } = useLanguage();
+  return <>
+    <div className="window-titlebar" aria-hidden="true">
+      <span className="window-app-icon">H</span>
+      <strong>Are u Human?.exe</strong>
+      <span className="window-controls"><i>_</i><i>□</i><i>×</i></span>
+    </div>
+    <div className="window-menubar" aria-hidden="true">
+      {(language === "zh" ? ["文件", "编辑", "查看", "帮助"] : ["File", "Edit", "View", "Help"]).map((label) => <span key={label}>{label}</span>)}
+    </div>
+  </>;
 }
 
 export default function App() {
@@ -513,6 +540,7 @@ function Home({ player, locked, pendingQuestion, deliveredAnswers, connectionNot
   const [questionKind, setQuestionKind] = useState<QuestionKind>("text");
   const [questionError, setQuestionError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const chatFeed = useRef<HTMLDivElement>(null);
   useEffect(() => { void gameSession.isModerator().then(setIsModerator).catch(() => setIsModerator(false)); }, []);
   useEffect(() => {
     if (pendingQuestion || deliveredAnswers.length > 0) {
@@ -521,6 +549,10 @@ function Home({ player, locked, pendingQuestion, deliveredAnswers, connectionNot
       setIsSubmitting(false);
     }
   }, [pendingQuestion, deliveredAnswers.length]);
+  useLayoutEffect(() => {
+    if (!chatFeed.current) return;
+    chatFeed.current.scrollTop = chatFeed.current.scrollHeight;
+  }, [connectionNotice, deliveredAnswers.length, pendingQuestion?.id]);
   function focusQuestion() { document.getElementById("home-question")?.focus(); }
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -537,16 +569,11 @@ function Home({ player, locked, pendingQuestion, deliveredAnswers, connectionNot
   }
   return (
     <main className="app-page" inert={locked} aria-hidden={locked || undefined}>
-      <nav className="site-nav" aria-label={t("siteLinks")}>
-        <span className="nav-brand">Are u Human?</span>
-        <button type="button" onClick={onConduct}>{t("conduct")}</button>
-        <button type="button" onClick={onActivity}>{t("activity")}</button>
-        <button type="button" onClick={onTerms}>{t("terms")}</button>
-        <button type="button" onClick={onPrivacy}>{t("privacy")}</button>
-        {isModerator && <button type="button" onClick={onModerate}>{t("moderate")}</button>}
-      </nav>
+      <DesktopIcons />
+      <SiteNavigation onConduct={onConduct} onActivity={onActivity} onTerms={onTerms} onPrivacy={onPrivacy} onModerate={isModerator ? onModerate : undefined} />
       <section className="game-shell" aria-labelledby="home-title">
         <h1 className="sr-only" id="home-title">{t("chooseAction")}</h1>
+        <WindowChrome />
         <div className="mode-tabs" role="group" aria-label={t("chooseRole")}>
           <button className="mode-tab active" aria-label={t("askQuestion")} type="button" onClick={focusQuestion}>{t("askHuman")}</button>
           <button className="mode-tab" aria-label={t("pretendAi")} type="button" onClick={onAnswer}>{t("playAi")}</button>
@@ -554,7 +581,7 @@ function Home({ player, locked, pendingQuestion, deliveredAnswers, connectionNot
         <div className="community-banner"><strong>{t("humansOnly")}</strong><span>{t("communityRule")}</span></div>
         {deliveredAnswers.length > 0 || pendingQuestion ? <div className="game-stage chat-stage">
           <div className="chat-heading"><div className="mini-scribble" aria-hidden="true" /><h2>Are u Human?</h2><button className="help-button" type="button" onClick={onHelp} aria-label={t("helpLabel")}>?</button></div>
-          <div className="chat-feed" aria-live="polite">
+          <div className="chat-feed" ref={chatFeed} aria-live="polite">
             {deliveredAnswers.map((delivery) => <Fragment key={delivery.answerId}>
               <article className="user-message"><small>{t(delivery.questionKind === "drawing" ? "youAskedDrawing" : "youAsked")}</small><p>{delivery.questionText}</p></article>
               <DeliveredChat delivery={delivery} />
@@ -580,8 +607,8 @@ function Home({ player, locked, pendingQuestion, deliveredAnswers, connectionNot
           <div className="composer-meta"><span>{question.length}/500</span><span>{t(pendingQuestion ? "pendingQuestion" : "sendingCredit")}</span></div>
           {questionError && <p className="form-error composer-error" role="alert">{questionError}</p>}
         </div>
+        <OnlinePresence mode="human" />
       </section>
-      <OnlinePresence mode="human" />
     </main>
   );
 }
@@ -658,14 +685,20 @@ function InstructionsModal({ onDone }: { onDone: () => void }) {
   </section></div>;
 }
 
-function SiteNavigation({ onConduct, onActivity, onTerms, onPrivacy }: { onConduct: () => void; onActivity: () => void; onTerms: () => void; onPrivacy: () => void }) {
-  const { t } = useLanguage();
+function SiteNavigation({ onConduct, onActivity, onTerms, onPrivacy, onModerate }: { onConduct: () => void; onActivity: () => void; onTerms: () => void; onPrivacy: () => void; onModerate?: () => void }) {
+  const { language, t } = useLanguage();
+  const time = new Intl.DateTimeFormat(language === "zh" ? "zh-CN" : "en", { hour: "2-digit", minute: "2-digit" }).format(new Date());
   return <nav className="site-nav" aria-label={t("siteLinks")}>
-    <span className="nav-brand">Are u Human?</span>
-    <button type="button" onClick={onConduct}>{t("conduct")}</button>
-    <button type="button" onClick={onActivity}>{t("activity")}</button>
-    <button type="button" onClick={onTerms}>{t("terms")}</button>
-    <button type="button" onClick={onPrivacy}>{t("privacy")}</button>
+    <span className="start-button"><i aria-hidden="true">▦</i>{language === "zh" ? "开始" : "Start"}</span>
+    <span className="nav-brand"><i aria-hidden="true">H</i>Are u Human?</span>
+    <span className="task-shortcuts">
+      <button type="button" onClick={onConduct}>{t("conduct")}</button>
+      <button type="button" onClick={onActivity}>{t("activity")}</button>
+      <button type="button" onClick={onTerms}>{t("terms")}</button>
+      <button type="button" onClick={onPrivacy}>{t("privacy")}</button>
+      {onModerate && <button type="button" onClick={onModerate}>{t("moderate")}</button>}
+    </span>
+    <span className="task-tray"><i aria-hidden="true">▥</i><span>{language === "zh" ? "中" : "EN"}</span><time>{time}</time></span>
   </nav>;
 }
 
@@ -701,14 +734,16 @@ function Activity({ player, onBack, onConduct, onTerms, onPrivacy }: { player: P
 function MachineFrame({ player, onHuman, onActivity, onConduct, onTerms, onPrivacy, children }: { player: Player; onHuman: () => void; onActivity: () => void; onConduct: () => void; onTerms: () => void; onPrivacy: () => void; children: ReactNode }) {
   const { t } = useLanguage();
   return <main className="app-page">
-    <nav className="site-nav" aria-label={t("siteLinks")}><span className="nav-brand">Are u Human?</span><button type="button" onClick={onConduct}>{t("conduct")}</button><button type="button" onClick={onActivity}>{t("activity")}</button><button type="button" onClick={onTerms}>{t("terms")}</button><button type="button" onClick={onPrivacy}>{t("privacy")}</button></nav>
+    <DesktopIcons />
+    <SiteNavigation onConduct={onConduct} onActivity={onActivity} onTerms={onTerms} onPrivacy={onPrivacy} />
     <section className="game-shell machine-shell">
+      <WindowChrome />
       <div className="mode-tabs" role="group" aria-label={t("chooseRole")}><button className="mode-tab" type="button" onClick={onHuman}>{t("askHuman")}</button><button className="mode-tab machine-active" type="button">{t("playAi")}</button></div>
       <div className="community-banner"><strong>{t("humansOnly")}</strong><span>{t("communityRule")}</span></div>
       <span className="machine-credit" aria-label={t("balance", { credits: t(player.creditBalance === 1 ? "credit" : "credits", { count: player.creditBalance }) })}>{player.creditBalance}c</span>
       <div className="machine-content">{children}</div>
+      <OnlinePresence mode="ai" />
     </section>
-    <OnlinePresence mode="ai" />
   </main>;
 }
 

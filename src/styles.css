@@ -231,23 +231,47 @@ summary { cursor: pointer; font-weight: 850; }
 }
 
 html, body { background: #008080; }
-body { background-color: #008080; font-size: 14px; }
+body { background-color: #008080; font-size: 13px; }
 button, input, textarea { font-family: inherit; }
 button:focus-visible, input:focus-visible, textarea:focus-visible, a:focus-visible, summary:focus-visible { outline: 1px dotted #000; outline-offset: -4px; }
 
-.app-page { position: fixed; inset: 0; padding: 24px 16px 42px; background: transparent; }
+.app-page { position: fixed; inset: 0; padding: 22px 16px 42px; background: transparent; }
+.desktop-icons { position: fixed; z-index: 0; top: 18px; left: 14px; display: grid; width: 82px; gap: 16px; color: #fff; font-size: 12px; line-height: 1.15; text-align: center; text-shadow: 1px 1px #000; }
+.desktop-icons > span { display: grid; justify-items: center; gap: 5px; }
+.desktop-icon { position: relative; display: block; width: 34px; height: 30px; filter: drop-shadow(1px 1px 0 #000); }
+.desktop-icon.computer::before { content: ""; position: absolute; inset: 1px 2px 8px; border: 2px solid #000; background: #c0c0c0; box-shadow: inset 0 0 0 2px #fff, inset 0 0 0 5px #000080; }
+.desktop-icon.computer::after { content: ""; position: absolute; right: 6px; bottom: 2px; left: 6px; height: 5px; border: 1px solid #000; background: #c0c0c0; }
+.desktop-icon.robot::before { content: "H"; position: absolute; inset: 4px 3px 2px; display: grid; place-items: center; border: 2px solid #fff; background: #000080; color: #fff; font-weight: 700; text-shadow: none; }
+.desktop-icon.robot::after { content: ""; position: absolute; top: 0; left: 16px; width: 2px; height: 5px; background: #fff; }
+.desktop-icon.document::before { content: ""; position: absolute; inset: 1px 6px 1px 7px; border: 1px solid #000; background: repeating-linear-gradient(#fff 0 4px, #000080 5px 6px); }
+.desktop-icon.document::after { content: ""; position: absolute; top: 1px; right: 6px; border-width: 0 0 8px 8px; border-style: solid; border-color: transparent transparent #c0c0c0 transparent; }
+.desktop-icon.bin::before { content: ""; position: absolute; inset: 7px 8px 1px; border: 2px solid #fff; background: repeating-linear-gradient(90deg, #808080 0 3px, #c0c0c0 3px 6px); }
+.desktop-icon.bin::after { content: ""; position: absolute; top: 3px; left: 7px; width: 21px; height: 4px; border: 1px solid #fff; background: #808080; }
 .site-nav { position: fixed; z-index: 15; right: 0; bottom: 0; left: 0; min-height: 32px; display: flex; justify-content: flex-start; gap: 4px; margin: 0; padding: 3px; border-top: 2px solid #fff; background: #c0c0c0; color: #000; font-size: 12px; font-weight: 400; }
-.site-nav::after { content: "Are u Human? is ready"; margin-left: auto; padding: 4px 10px; border: 1px solid #808080; border-color: #808080 #fff #fff #808080; color: #404040; }
-.site-nav button, .site-nav .nav-brand { min-height: 24px; padding: 4px 9px; border: 2px outset #fff; background: #c0c0c0; color: #000; text-transform: none; }
+.site-nav::after { content: none; }
+.site-nav button, .site-nav .nav-brand, .start-button { min-height: 24px; padding: 3px 8px; border: 2px solid; border-color: #fff #000 #000 #fff; background: #c0c0c0; color: #000; text-transform: none; box-shadow: inset 1px 1px #dfdfdf, inset -1px -1px #808080; }
 .site-nav button:active { border-style: inset; }
 .site-nav button:hover { color: #000; text-decoration: none; background: #d4d0c8; }
-.nav-brand { display: flex; align-items: center; gap: 4px; font-weight: 700; letter-spacing: 0; }
-.nav-brand::before { content: "▣"; color: #000080; font-size: 15px; line-height: 10px; }
+.start-button, .nav-brand { display: flex; align-items: center; gap: 5px; font-weight: 700; letter-spacing: 0; }
+.start-button i { color: #000080; font-size: 16px; font-style: normal; line-height: 10px; }
+.nav-brand { width: min(220px, 26vw); border-color: #000 #fff #fff #000 !important; box-shadow: inset 1px 1px #808080 !important; }
+.nav-brand i, .window-app-icon { display: grid; width: 16px; height: 16px; place-items: center; background: #000080; color: #fff; font-size: 10px; font-style: normal; font-weight: 700; }
+.task-shortcuts { display: flex; gap: 3px; min-width: 0; }
+.task-shortcuts button { padding-inline: 7px; }
+.task-tray { display: flex; min-height: 24px; align-items: center; gap: 7px; margin-left: auto; padding: 3px 8px; border: 2px solid; border-color: #808080 #fff #fff #808080; white-space: nowrap; }
+.task-tray i { color: #000080; font-style: normal; }
 
-.game-shell { position: relative; width: min(var(--game-shell-width), 880px); min-width: min(var(--game-shell-width), 880px); max-width: min(var(--game-shell-width), 880px); border: 2px outset #fff; border-radius: 0; background: #c0c0c0; box-shadow: none; padding-top: 27px; overflow: visible; }
-.game-shell::before, .gate-card::before, .home-card::before { content: "Are u Human?"; position: absolute; z-index: 1; top: 3px; right: 3px; left: 3px; height: 21px; padding: 3px 6px; background: #000080; color: #fff; font-size: 13px; font-weight: 700; line-height: 15px; }
-.game-shell::after, .gate-card::after, .home-card::after { content: "×"; position: absolute; z-index: 2; top: 5px; right: 5px; display: grid; width: 17px; height: 17px; place-items: center; border: 1px outset #fff; background: #c0c0c0; color: #000; font-family: Arial, sans-serif; font-size: 16px; font-weight: 700; line-height: 1; }
-.mode-tabs { height: 48px; border: 0; gap: 4px; padding: 4px; background: #c0c0c0; }
+.game-shell { position: relative; z-index: 1; width: min(var(--game-shell-width), 880px); min-width: min(var(--game-shell-width), 880px); max-width: min(var(--game-shell-width), 880px); border: 2px solid; border-color: #fff #000 #000 #fff; border-radius: 0; background: #c0c0c0; box-shadow: 2px 2px 0 #000; padding: 2px; overflow: hidden; }
+.game-shell::before, .game-shell::after { content: none; }
+.gate-card::before, .home-card::before { content: "Are u Human?"; position: absolute; z-index: 1; top: 3px; right: 3px; left: 3px; height: 21px; padding: 3px 6px; background: #000080; color: #fff; font-size: 13px; font-weight: 700; line-height: 15px; }
+.gate-card::after, .home-card::after { content: "×"; position: absolute; z-index: 2; top: 5px; right: 5px; display: grid; width: 17px; height: 17px; place-items: center; border: 1px outset #fff; background: #c0c0c0; color: #000; font-family: Arial, sans-serif; font-size: 16px; font-weight: 700; line-height: 1; }
+.window-titlebar { min-height: 22px; display: flex; align-items: center; gap: 5px; padding: 2px 3px; background: #000080; color: #fff; font-size: 12px; }
+.window-titlebar strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.window-controls { display: flex; gap: 2px; margin-left: auto; }
+.window-controls i { display: grid; width: 18px; height: 17px; place-items: center; border: 2px solid; border-color: #fff #000 #000 #fff; background: #c0c0c0; color: #000; font-family: Arial, sans-serif; font-size: 12px; font-style: normal; font-weight: 700; line-height: 1; box-shadow: inset 1px 1px #dfdfdf, inset -1px -1px #808080; }
+.window-menubar { display: flex; flex: 0 0 24px; align-items: center; gap: 18px; padding: 3px 9px; border-bottom: 1px solid #808080; color: #000; font-size: 12px; }
+.window-menubar span::first-letter { text-decoration: underline; }
+.mode-tabs { height: 34px; border: 0; gap: 3px; padding: 4px 6px 0; background: #c0c0c0; }
 .mode-tab { border: 2px outset #fff; background: #c0c0c0; color: #000; font-size: .9rem; font-weight: 400; text-transform: none; }
 .mode-tab:last-child { border-right: 2px outset #fff; }
 .mode-tab.active, .mode-tab.machine-active { border-style: inset; background: #fff; color: #000; box-shadow: none; font-weight: 700; }
@@ -258,8 +282,10 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, a:focus-visib
 .game-stage, .chat-stage, .machine-content { background: #c0c0c0; color: #000; }
 .stage-kicker, .stage-copy, .queue-card p, .queue-card small, .skip-tip span, .fine-print, .notice, .lede { color: #404040; }
 .game-stage h2, .chat-heading h2 { color: #000; letter-spacing: 0; text-transform: none; }
-.scribble-mark i, .mini-scribble { border-color: #000080; }
-.scribble-mark i { border-radius: 0; }
+.scribble-mark { display: none; }
+.game-stage:not(.chat-stage)::before { content: "H"; display: grid; width: 72px; height: 54px; place-items: center; margin-bottom: 18px; border: 3px solid; border-color: #fff #000 #000 #fff; background: #000080; color: #fff; font-size: 28px; font-weight: 700; box-shadow: 8px 8px 0 -5px #000, 0 8px 0 -5px #c0c0c0; }
+.mini-scribble { display: grid; width: 22px; height: 22px; place-items: center; border: 1px solid #000; border-radius: 0; background: #000080; transform: none; }
+.mini-scribble::after { content: "H"; color: #fff; font-size: 11px; font-weight: 700; }
 .help-button { border: 2px outset #fff; border-radius: 0; background: #c0c0c0; color: #000080; font-weight: 700; }
 .help-button:active { border-style: inset; }
 
@@ -277,16 +303,22 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, a:focus-visib
 .send-glyph:active:not(:disabled) { border-style: inset; }
 .composer-meta, .online-note { color: #404040; }
 
-.chat-feed { scrollbar-color: #808080 #c0c0c0; }
+.chat-stage { padding: 8px; }
+.chat-heading { flex: 0 0 auto; padding: 4px 5px; border: 2px solid; border-color: #808080 #fff #fff #808080; background: #c0c0c0; }
+.chat-heading h2 { font-size: 13px; font-weight: 700; }
+.chat-heading .help-button { width: 23px; height: 23px; margin-left: auto; }
+.chat-feed { gap: 0; margin-top: 6px; padding: 0; border: 2px solid; border-color: #808080 #fff #fff #808080; background: #fff; scrollbar-color: #808080 #c0c0c0; }
 .chat-feed::-webkit-scrollbar { background: #c0c0c0; }
 .chat-feed::-webkit-scrollbar-track { border: 1px inset #fff; border-radius: 0; background: #fff; }
 .chat-feed::-webkit-scrollbar-thumb { border: 2px outset #fff; border-radius: 0; background: #c0c0c0; }
-.user-message, .assistant-message, .waiting-message, .queue-card, .assignment-card, .skip-tip, .success-banner, .activity-list li, .confirm-panel, details { border: 2px inset #fff; border-radius: 0; background: #fff; color: #000; transform: none; }
-.user-message { background: #e6ffe6; }
-.assistant-message { background: #fff; }
+.user-message, .assistant-message { position: relative; align-self: stretch; width: auto; max-width: none; padding: 9px 10px 9px 34px; border: 0; border-bottom: 1px dotted #808080; border-radius: 0; background: #fff; color: #000; transform: none; }
+.user-message::before, .assistant-message::before { position: absolute; top: 9px; left: 9px; display: grid; width: 17px; height: 17px; place-items: center; border: 1px solid #000; color: #fff; font-size: 10px; font-weight: 700; }
+.user-message::before { content: "U"; background: #008000; }
+.assistant-message::before { content: "H"; background: #000080; }
+.waiting-message, .queue-card, .assignment-card, .skip-tip, .success-banner, .activity-list li, .confirm-panel, details { border: 2px inset #fff; border-radius: 0; background: #fff; color: #000; transform: none; }
 .user-message small, .assistant-message > small, .chat-feedback { color: #404040 !important; }
-.user-message p, .assistant-message > p { color: #000; }
-.waiting-message { background: #ffffcc; color: #000; }
+.user-message p, .assistant-message > p { margin: 3px 0 0; color: #000; }
+.waiting-message { align-self: stretch; margin: 0; padding: 9px 10px; border-width: 0 0 1px; border-style: dotted; border-color: #808080; background: #ffffcc; color: #000; }
 .chat-loading-orb { width: 28px; height: 28px; flex: 0 0 28px; }
 .message-actions > button, .chat-report > summary, .chat-report button { border: 2px outset #fff; border-radius: 0; background: #c0c0c0; color: #000; }
 .chat-report > summary { color: #800000; }
@@ -317,27 +349,43 @@ textarea:focus, .prompt-bar:focus-within { border-color: #000080; outline: 1px d
 .notice { border-left: 2px inset #fff; }
 .timer { color: #000080; }
 
-.modal-backdrop { background: #00000080; backdrop-filter: none; }
+.modal-backdrop { background: transparent; backdrop-filter: none; }
 .entry-modal, .instruction-modal, .gate-card, .home-card { border: 2px outset #fff; border-radius: 0; background: #c0c0c0; color: #000; box-shadow: 2px 2px 0 #000; }
-.entry-modal, .instruction-modal { padding-top: 46px; transform: none; }
+.entry-modal, .instruction-modal { position: relative; padding-top: 54px; transform: none; }
+.entry-modal::before, .instruction-modal::before { content: "Are u Human? — System Message"; position: absolute; top: 3px; right: 3px; left: 3px; height: 22px; padding: 3px 6px; background: #000080; color: #fff; font-size: 12px; font-weight: 700; line-height: 16px; text-align: left; }
+.entry-modal::after, .instruction-modal::after { content: "×"; position: absolute; top: 5px; right: 5px; display: grid; width: 18px; height: 18px; place-items: center; border: 2px solid; border-color: #fff #000 #000 #fff; background: #c0c0c0; color: #000; font-family: Arial, sans-serif; font-size: 14px; font-weight: 700; line-height: 1; }
 .entry-modal h2, .instruction-modal h2, .entry-modal > p, .instruction-modal > p, .entry-modal small, .instruction-modal small, .status-message { color: #000; text-transform: none; }
-.modal-icon { color: #000080; }
+.modal-icon { width: 30px; height: 30px; display: grid; place-items: center; margin: 0 auto 4px; border: 2px solid #000; border-radius: 50%; background: #ffff00; color: transparent; font-size: 0; font-weight: 700; }
+.modal-icon::after { content: "!"; color: #000; font-family: Arial, sans-serif; font-size: 20px; }
 .consent-row { border: 2px inset #fff; border-radius: 0; background: #fff; }
 .consent-row input { accent-color: #000080; }
 .consent-row button { color: #000080; }
 .gate-shell, .home-shell { padding: 54px 18px; background: transparent; }
 .gate-card, .home-card { padding-top: clamp(54px, 7vw, 76px); }
+.home-card h1, .gate-card h1 { max-width: 28ch; font-size: clamp(1.55rem, 4vw, 2.25rem); line-height: 1.12; letter-spacing: 0; }
+.home-card h2, .gate-card h2 { margin-top: 20px; font-size: 1.15rem; }
 .loading-card { min-height: 330px; }
 .loading-orb { filter: drop-shadow(0 0 4px #000080); }
 .credit-balance { top: 38px; border: 2px outset #fff; background: #c0c0c0; color: #000; }
+.online-note { display: grid; flex: 0 0 auto; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 3px; margin: 2px 0 0; padding: 2px; color: #000; font-size: 11px; text-align: left; }
+.online-note span { overflow: hidden; padding: 3px 6px; border: 1px solid; border-color: #808080 #fff #fff #808080; text-overflow: ellipsis; white-space: nowrap; }
+.online-note br { display: none; }
 
 @media (max-width: 620px) {
-  .app-page { padding: 60px 0 38px; }
-  .site-nav { overflow-x: auto; }
-  .site-nav::after { display: none; }
-  .site-nav button, .site-nav .nav-brand { flex: 0 0 auto; }
+  .app-page { padding: 8px 0 38px; }
+  .desktop-icons { display: none; }
+  .site-nav { overflow: hidden; }
+  .site-nav button, .site-nav .nav-brand, .start-button { flex: 0 0 auto; }
+  .task-shortcuts { display: none; }
+  .nav-brand { width: min(190px, 48vw); }
+  .task-tray { display: none; }
   .game-shell { width: 100%; min-width: 100%; max-width: 100%; border-right: 2px outset #fff; border-left: 2px outset #fff; }
   .gate-card, .home-card { border: 2px outset #fff; }
+  .window-menubar { gap: 14px; }
+  .mode-tabs { height: 34px; }
+  .community-banner { justify-content: flex-start; overflow: hidden; white-space: nowrap; }
+  .online-note { grid-template-columns: 1fr; }
+  .online-note span:last-child { display: none; }
 }
 /* Global language control remains available above consent and instruction modals. */
 .language-switch {
@@ -346,23 +394,30 @@ textarea:focus, .prompt-bar:focus-within { border-color: #000080; outline: 1px d
   top: 12px;
   right: 12px;
   display: flex;
-  overflow: hidden;
-  border: 1px solid #111;
-  border-radius: 999px;
-  background: #fff;
-  box-shadow: 2px 2px 0 #111;
+  gap: 2px;
+  padding: 2px;
+  border: 2px solid;
+  border-color: #fff #000 #000 #fff;
+  border-radius: 0;
+  background: #c0c0c0;
+  box-shadow: 1px 1px 0 #000;
 }
 
 .language-switch button {
-  min-height: 32px;
-  padding: 5px 10px;
-  border: 0;
-  background: transparent;
+  min-height: 24px;
+  padding: 3px 8px;
+  border: 2px solid;
+  border-color: #fff #000 #000 #fff;
+  background: #c0c0c0;
   color: #111;
   font: inherit;
   font-size: 12px;
   cursor: pointer;
 }
 
-.language-switch button + button { border-left: 1px solid #111; }
-.language-switch button.selected { background: #111; color: #fff; }
+.language-switch button + button { border-left: 2px solid #fff; }
+.language-switch button.selected { border-color: #000 #fff #fff #000; background: #000080; color: #fff; box-shadow: inset 1px 1px #808080; }
+
+@media (max-width: 620px) {
+  .language-switch { top: auto; right: 4px; bottom: 4px; box-shadow: none; }
+}
