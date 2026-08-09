@@ -11,11 +11,8 @@ Deployment is intentionally off until the repository owner enables it. This prev
    - `SUPABASE_ACCESS_TOKEN`
    - `SUPABASE_PROJECT_ID` (the Supabase project reference)
    - `SUPABASE_DB_PASSWORD`
-   - `VERCEL_TOKEN`
-   - `VERCEL_ORG_ID`
-   - `VERCEL_PROJECT_ID`
 3. Add repository variable `DEPLOY_ENABLED` with value `true`.
 
-After that, a successful push to `master` or a manually started `master` workflow first previews and applies all pending Supabase migrations, then deploys the Vite build to Vercel. Turn the variable back to any other value to pause deployment without deleting the workflow.
+After that, a successful push to `master` or a manually started `master` workflow previews and applies all pending Supabase migrations. The existing Vercel Git integration builds and deploys the frontend automatically from `master`. Turn the variable back to any other value to pause database deployment without deleting the workflow.
 
 Before the first production deployment, take a Supabase backup and confirm the target project reference. The database migration is irreversible once applied to production.
